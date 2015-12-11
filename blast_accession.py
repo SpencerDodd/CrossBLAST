@@ -1092,7 +1092,9 @@ def main():
 			handle_requests(query_database, 'cross', query_accession)
 			parse_queries(query_database, query_species, query_subspecies)
 
-		print 'Connection error. Reconnecting with GenBank ...'
+		except CPULimitError, e:
+			
+			print 'Connection error. Reconnecting with GenBank ...'
 
 			parse_queries(query_database, query_species, query_subspecies)
 
