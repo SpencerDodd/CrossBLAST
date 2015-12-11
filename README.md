@@ -51,6 +51,8 @@ python blast_accession.py INPUT_TYPE QUERY_DATABASE QUERY_SPECIES_NAME QUERY_SUB
 
 --------------------------------------------------------
 
+###### Summary:
+
 This script queries the NCBI's BLAST servers to look for sequence hits in the inputted database using the blastn algorithm. It outputs the hit information in .csv format delineated by the Family, SubFamily, Genus, Species, and Subspecies phylogenetic levels. 
 
 One important facet of the data analysis is that the % difference field in the output is actually the % difference between the query and hit / 2. This finds the distance to closest common ancestor between the hit and query.
@@ -69,11 +71,15 @@ python cross_blast.py QUERY_DATABASE
 
 --------------------------------------------------------
 
+###### Summary:
+
 This script works off of one set of ```blast_accession.py``` results. After executing in shell, it will prompt a file browsing window. With this, you want to select the result file of the phylogenetic level of relationships to the query you are interested in exploring. At this point in time, it supports just the species results (I believe).
 
 What this does is examine all possible combinations of BLAST queries (queries for all members of the original species hits). This outputs a data set that contains the uppermost and lowermost bounds for distances to common ancestor for the phylogenetic level of interest in relation to the original query sequence. 
 
 #### hits_from_excel.R
+
+###### Summary:
 
 This script is a hacky little R script for data visualization (used for data integrity checks). It doesn't really need to be delved into further, and will probably be replaced in the near future with either an integrated python script with the same functionality.
 
