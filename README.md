@@ -46,6 +46,9 @@ where...
   + This is used for the same reason as QUERY_SPECIES
 
 ```QUERY_ACCESSION_NUMBER``` is the accession number of the query sequence
+
+  + This is only a necessary input if you are using an accession number based query
+
 --------------------------------------------------------
 
 This script queries the NCBI's BLAST servers to look for sequence hits in the inputted database using the blastn algorithm. It outputs the hit information in .csv format delineated by the Family, SubFamily, Genus, Species, and Subspecies phylogenetic levels. 
@@ -62,6 +65,7 @@ python cross_blast.py QUERY_DATABASE
 ```
 
 ```QUERY_DATABASE``` is the same as defined in ```blast_accession.py```
+
 --------------------------------------------------------
 
 This script works off of one set of ```blast_accession.py``` results. After executing in shell, it will prompt a file browsing window. With this, you want to select the result file of the phylogenetic level of relationships to the query you are interested in exploring. At this point in time, it supports just the species results (I believe).
