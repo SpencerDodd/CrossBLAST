@@ -1019,7 +1019,7 @@ def main():
 	# number of the current sequence
 	cross_blast_seq_num = sys.argv[6]
 	# total number of sequences being cross-blasted
-	cross_blast_seq_total = sys.argv[6]
+	cross_blast_seq_total = sys.argv[7]
 
 	# clears the current terminal shell
 	os.system("clear")
