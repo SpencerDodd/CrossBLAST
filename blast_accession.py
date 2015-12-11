@@ -1016,9 +1016,15 @@ def main():
 	query_species = sys.argv[3]
 	query_subspecies = sys.argv[4]
 	query_accession = sys.argv[5]
+	# number of the current sequence
+	cross_blast_seq_num = sys.argv[6]
+	# total number of sequences being cross-blasted
+	cross_blast_seq_total = sys.argv[6]
 
 	# clears the current terminal shell
 	os.system("clear")
+
+	print 'Querying sequence {0} / {1}'.format(cross_blast_seq_num, cross_blast_seq_total)
 
 	if input_type == 'F' or input_type == 'f':
 

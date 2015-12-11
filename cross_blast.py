@@ -87,7 +87,7 @@ class CrossBlast:
 			species = self.query_names[index][0]
 			subspecies = self.query_names[index][1]
 
-			call(['python', 'blast_accession.py', 'cross', self.query_database, species, subspecies, accession])
+			call(['python', 'blast_accession.py', 'cross', self.query_database, species, subspecies, accession, str((index + 1)), str(len(self.accessions))])
 
 # requires user interaction to determine the query sequence's species and subspecies strings
 #		NOT available through GenBank query
