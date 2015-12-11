@@ -46,8 +46,6 @@ where...
   + This is used for the same reason as QUERY_SPECIES
 
 ```QUERY_ACCESSION_NUMBER``` is the accession number of the query sequence
-
-  + This is a test
 --------------------------------------------------------
 
 This script queries the NCBI's BLAST servers to look for sequence hits in the inputted database using the blastn algorithm. It outputs the hit information in .csv format delineated by the Family, SubFamily, Genus, Species, and Subspecies phylogenetic levels. 
