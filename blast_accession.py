@@ -492,7 +492,7 @@ def compare_hit_to_query_phylogeny(hit_phylogeny, query_phylogeny, hit_name, que
 
 		return 'subspecies'
 
-	# if there is just the query species in the hit name, they must be species related
+	# if there is just the query species in the hit name, they must be delegated to OTHER
 	elif query_species in hit_name:
 
 		return 'species'
@@ -1031,7 +1031,7 @@ def result_output_directory(current_directory):
 			
 			result = current_directory[:rev_index]
 
-			result += '/Results/{0}/'.format(today)
+			result += '/Results/{0}/{1}_{2}_{3}_({4}h_{5}m_{6}s)/'.format(today, query_species, query_subspecies, query_database, hour, minute, second)
 
 			return result
 
@@ -1053,6 +1053,11 @@ def consolidate_result_files():
 
 # runs the business
 def main():
+
+	# sets values to global for naming dirs for result output
+	global query_species
+	global query_subspecies
+	global query_database
 
 	# defines the type of run that will be completed
 	# i.e. FASTA, accession #, or w.e.
@@ -1117,14 +1122,14 @@ if __name__ == "__main__":
 
 TODO
 
+	[ ] Make so that sequences that only have species and no subspecies match on genus level, not species level
+		[ ] nearly impossible...
+	[ ] Fix file output locations
 	[ ] Place CPULimitError exception in parse_queries (where it should be first detected)
-	[ ] Place a Genbank connection error in 
-
+	[x] Place a Genbank connection error in 
 	[ ] Figure out how to re-enter species / subspecies names if mistyped that doesn't
 		result in mis-formatted file-output and query_species / query_subspecies data
 		entries.
-
-	[ ] Get Excel output to single file
 
 '''
 
