@@ -17,7 +17,7 @@ This is the workhouse of the scripts. And the most spaghetti. It is run with the
 python blast_accession.py INPUT_TYPE QUERY_DATABASE QUERY_SPECIES_NAME QUERY_SUBSPECIES_NAME QUERY_ACCESSION_NUMBER
 ```
 
-where...
+###### Arguments:
 
 ```INPUT_TYPE``` is the style in which the query data will be given to the script
 
@@ -63,6 +63,7 @@ This is an extension of functionality and scope of the original ```blast_accessi
 ```
 python cross_blast.py QUERY_DATABASE
 ```
+###### Arguments:
 
 ```QUERY_DATABASE``` is the same as defined in ```blast_accession.py```
 
