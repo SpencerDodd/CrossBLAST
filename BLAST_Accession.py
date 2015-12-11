@@ -146,8 +146,8 @@ def save_xml_file(query_object):
 	print '\nSaving XML results ...'
 
 
-	# output file to folder "BLAST_QUERIES", 1 level back from pwd
-	file_path = '%sBLAST_QUERIES/%s/' % (one_directory_back(os.getcwd()), today)
+	# output file to folder "BLAST_QUERIES", 2 levels back from pwd
+	file_path = '%sBLAST_QUERIES/%s/' % (result_output_directory(os.getcwd()), today)
 
 	# make dir if it doesn't already exist
 	if not os.path.exists(file_path):
@@ -364,11 +364,11 @@ def sort_by_phylogeny(query_species, query_subspecies, query_type):
 	# if there is no subspecies name
 	if len(query_subspecies) > 0:
 
-		output_path = '%sPHYLO_DATA/%s/(%sh_%sm_%ss)%s_%s_%s/' % (one_directory_back(os.getcwd()), today, hour, minute, second, query_genus, query_species, query_subspecies)
+		output_path = '%sPHYLO_DATA/%s/(%sh_%sm_%ss)%s_%s_%s/' % (result_output_directory(os.getcwd()), today, hour, minute, second, query_genus, query_species, query_subspecies)
 
 	else:
 
-		output_path = '%sPHYLO_DATA/%s/(%sh_%sm_%ss)%s_%s_%s/' % (one_directory_back(os.getcwd()), today, hour, minute, second, query_genus, query_species, 'NO-SUBSPECIES')
+		output_path = '%sPHYLO_DATA/%s/(%sh_%sm_%ss)%s_%s_%s/' % (result_output_directory(os.getcwd()), today, hour, minute, second, query_genus, query_species, 'NO-SUBSPECIES')
 
 	output_phylo(Subspecies, 'Subspecies', output_path)
 	output_phylo(Species, 'Species', output_path)
@@ -699,7 +699,7 @@ def summarize_level(hits, level, query_name, query_type):
 		sheet1.write(index + 1, 3, hit[3])
 		sheet1.write(index + 1, 4, level)
 
-	save_path = '{0}Excel_Hits/{1}/{2}_({3}h{4}m{5}s)_{6}/'.format(one_directory_back(os.getcwd()), today, query_type, hour, minute, second, query_name[21:])
+	save_path = '{0}Excel_Hits/{1}/{2}_({3}h{4}m{5}s)_{6}/'.format(result_output_directory(os.getcwd()), today, query_type, hour, minute, second, query_name[21:])
 	
 	# make dir if it doesn't already exist
 	if not os.path.exists(save_path):
@@ -850,7 +850,7 @@ def query_genbank(query_name, query_type):
 		phylo_handle = Entrez.efetch(db='nucleotide', id=accession_num, rettype='gb', retmode='xml')
 
 		# output file to folder "GENBANK_DATA", 1 level back from pwd
-		file_path = '%sGENBANK_DATA/%s/' % (one_directory_back(os.getcwd()), today)
+		file_path = '%sGENBANK_DATA/%s/' % (result_output_directory(os.getcwd()), today)
 
 		# make dir if it doesn't already exist
 		if not os.path.exists(file_path):
@@ -960,7 +960,7 @@ def output_full_hits(seq_name, all_hits, all_accessions):
 
 		seq_name = seq_name[:75]
 
-	file_path = '%sBLAST_HITS/%s/%s(%sh%sm%ss)/' % (one_directory_back(os.getcwd()), today, seq_name, hour, minute, second)
+	file_path = '%sBLAST_HITS/%s/%s(%sh%sm%ss)/' % (result_output_directory(os.getcwd()), today, seq_name, hour, minute, second)
 
 	# make dir if it doesn't already exist
 	if not os.path.exists(file_path):
@@ -993,8 +993,10 @@ def strip_incorrect_chars(hit):
 
 	return new_hit
 
-# returns the pwd, minus one level of depth
-def one_directory_back(current_directory):
+# returns the pwd, minus two levels of depth
+def result_output_directory(current_directory):
+
+	print current_directory
 
 	rev_dir = current_directory[::-1]
 
@@ -1002,15 +1004,23 @@ def one_directory_back(current_directory):
 
 	result = ''
 
+	count = 0
+
 	for c in rev_dir:
 
-		if c == '/':
+		if count == 2:
 
 			rev_result += rev_dir[rev_dir.index(c):]
 			
 			result = rev_result[::-1]
 
+			result += '/Results_{0}/'.format(today)
+
 			return result
+
+		elif c == '/':
+
+			count += 1
 
 # TODO
 # consolidates all of the Excel output files into a single summary output csv file
@@ -1090,7 +1100,7 @@ def test_main():
 	os.system("clear")
 
 	# skips the BLAST query to speed up debug time
-	dir_path = one_directory_back(os.getcwd())
+	dir_path = result_output_directory(os.getcwd())
 	#file_path = dir_path + 'BLAST_QUERIES/15_11_12/query_15_11_12_(23h58m14s).xml' # cervus nippon taiouanus
 	#file_path = dir_path + 'BLAST_QUERIES/15_11_12/query_15_11_12_(21h44m38s).xml' # anguilla australis
 	#file_path = dir_path + 'BLAST_QUERIES/15_11_13/query_15_11_13_(0h20m32s).xml' # anguilla bicolor bicolor
