@@ -47,7 +47,7 @@ where...
 
 ```QUERY_ACCESSION_NUMBER``` is the accession number of the query sequence
 
-  + This is only a necessary input if you are using an accession number based query. (and in cross_blast queries)
+  + This is only a necessary input if you are using an accession number based query
 --------------------------------------------------------
 
 This script queries the NCBI's BLAST servers to look for sequence hits in the inputted database using the blastn algorithm. It outputs the hit information in .csv format delineated by the Family, SubFamily, Genus, Species, and Subspecies phylogenetic levels. 
