@@ -18,14 +18,15 @@ python blast_accession.py INPUT_TYPE QUERY_DATABASE QUERY_SPECIES_NAME QUERY_SUB
 ```
 
 ###### Arguments:
+###### + input value : explanation
 
 ```INPUT_TYPE``` is the style in which the query data will be given to the script
 
-  + a: accession number
+  + a : accession number
 
-  + f: FASTA file
+  + f : FASTA file
 
-  + cross: cross_blast request (not applicable for shell use, but will be elaborated later)
+  + cross : cross_blast request (not applicable for shell use, but will be elaborated later)
 
 ```QUERY_DATABASE``` is any of the NCBI's publicly available databases 
 
@@ -39,7 +40,7 @@ python blast_accession.py INPUT_TYPE QUERY_DATABASE QUERY_SPECIES_NAME QUERY_SUB
 
 ```QUERY_SPECIES``` is the name of the species of the organism the query sequence belongs to
 
-  + This is used due to the fact that the NCBI's API only returns phylogenetic information up to the genus level. This value is used to regex match with hits to determine level of relatedness past the genus level
+  + This is used due to the fact that the NCBI's API only returns phylogenetic information up to the genus level. This value is used to string match with the names of hits to determine level of relatedness past the genus level
 
 ```QUERY_SUBSPECIES``` is the name of the subspecies of the organism the query sequence belongs to
 
