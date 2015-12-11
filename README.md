@@ -21,33 +21,33 @@ where...
 
 ```INPUT_TYPE``` is the style in which the query data will be given to the script
 
-  +a: accession number
+  + a: accession number
 
-  +f: FASTA file
+  + f: FASTA file
 
-  +cross: cross_blast request (not applicable for shell use, but will be elaborated later)
+  + cross: cross_blast request (not applicable for shell use, but will be elaborated later)
 
 ```QUERY_DATABASE``` is any of the NCBI's publicly available databases 
 
-  +human_genomic
+  + human_genomic
 
-  +nt
+  + nt
 
-  +refseq_genomic
+  + refseq_genomic
 
-  +etc...
+  + etc...
 
 ```QUERY_SPECIES``` is the name of the species of the organism the query sequence belongs to
 
-  +This is used due to the fact that the NCBI's API only returns phylogenetic information up to the genus level. This value is used to regex match with hits to determine level of relatedness past the genus level
+  + This is used due to the fact that the NCBI's API only returns phylogenetic information up to the genus level. This value is used to regex match with hits to determine level of relatedness past the genus level
 
 ```QUERY_SUBSPECIES``` is the name of the subspecies of the organism the query sequence belongs to
 
-  +This is used for the same reason as QUERY_SPECIES
+  + This is used for the same reason as QUERY_SPECIES
 
 ```QUERY_ACCESSION_NUMBER``` is the accession number of the query sequence
 
-  +This is only a necessary input if you are using an accession number based query. (and in cross_blast queries)
+  + This is only a necessary input if you are using an accession number based query. (and in cross_blast queries)
 --------------------------------------------------------
 
 This script queries the NCBI's BLAST servers to look for sequence hits in the inputted database using the blastn algorithm. It outputs the hit information in .csv format delineated by the Family, SubFamily, Genus, Species, and Subspecies phylogenetic levels. 
