@@ -1023,15 +1023,15 @@ def result_output_directory(current_directory):
 
 	count = 0
 
-	for c in rev_dir:
+	for index, c in enumerate(rev_dir):
 
-		if count == 3:
+		if count == 2:
 
-			rev_result += rev_dir[rev_dir.index(c):]
+			rev_index = len(current_directory) - (index)
 			
-			result = rev_result[::-1]
+			result = current_directory[:rev_index]
 
-			result += '/Results_{0}/'.format(today)
+			result += '/Results/{0}/'.format(today)
 
 			return result
 
@@ -1089,6 +1089,18 @@ def main():
 		print '\n---- Cross BLAST Accession Input -----\n '
 
 		handle_requests(query_database, 'cross', query_accession)
+		parse_queries(query_database, query_species, query_subspecies, input_type)
+
+		print '\n----- Complete! -----\n '
+
+	elif input_type == 'genbank':
+
+		print '\n---- GenBank Query with BLAST XML Input -----\n '
+
+		root = Tkinter.Tk()
+		root.withdraw()
+		file_path = tkFileDialog.askopenfilename()
+		xml_results.append(file_path)
 		parse_queries(query_database, query_species, query_subspecies, input_type)
 
 		print '\n----- Complete! -----\n '
