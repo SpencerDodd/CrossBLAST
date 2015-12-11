@@ -30,6 +30,7 @@ Entrez.email = 'dodd.s@husky.neu.edu'
 
 queries = []
 xml_results = []
+genbank_successful = 'False'
 
 # holds important information for query hits
 	# 0: Accession number
@@ -257,132 +258,144 @@ def parse_queries(query_database, query_species, query_subspecies):
 		#		divergence = (100 - identity) / 2
 def sort_by_phylogeny(query_species, query_subspecies, query_database):
 
-	Family = []
-	Subfamily = []
-	Genus = []
-	Species = []
-	Subspecies = []
-	Other = []
+	while not genbank_successful:
 
-	query_phylogeny = []
-	query_genus = ''
-	query_name = ''
+		try:
 
-	# find the phylogeny of the query sequence
-	# % identity = 100
-	for hit in hit_accessions:
+			Family = []
+			Subfamily = []
+			Genus = []
+			Species = []
+			Subspecies = []
+			Other = []
 
-		'''
-		# DEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUG
-		# DEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUG
-		print 'Name: {0}'.format(hit[3].splitlines()[0])
-		print 'Phylogeny: {0}'.format(hit[2])
-		# DEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUG
-		# DEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUG
-		'''
+			query_phylogeny = []
+			query_genus = ''
+			query_name = ''
 
-		if hit[1] == 100.0:
+			# find the phylogeny of the query sequence
+			# % identity = 100
+			for hit in hit_accessions:
 
-			query_phylogeny_string = hit[2] + ';'
+				'''
+				# DEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUG
+				# DEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUG
+				print 'Name: {0}'.format(hit[3].splitlines()[0])
+				print 'Phylogeny: {0}'.format(hit[2])
+				# DEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUG
+				# DEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUG
+				'''
 
-			# parses the phylogeny string into a list (query_phylogeny)
-			last_break = 0
-			for index, c in enumerate(query_phylogeny_string):
+				if hit[1] == 100.0:
 
-				if c == ';':
+					query_phylogeny_string = hit[2] + ';'
 
-					current_level = query_phylogeny_string[last_break:index]
+					# parses the phylogeny string into a list (query_phylogeny)
+					last_break = 0
+					for index, c in enumerate(query_phylogeny_string):
 
-					query_phylogeny.append(current_level)
+						if c == ';':
 
-					last_break = index + 1
+							current_level = query_phylogeny_string[last_break:index]
 
-			# add query name to the variable
-			query_name = hit[3].splitlines()[0]
+							query_phylogeny.append(current_level)
 
-	# determine the species and subspecies strings for the query sequence
-	#query_species, query_subspecies = get_deep_phylogeny(query_name)
-	if len(query_phylogeny) == 1:
+							last_break = index + 1
 
-		raise CPULimitError("----- ERROR: CPU limit reached...retry query -----")
+					# add query name to the variable
+					query_name = hit[3].splitlines()[0]
 
-	query_genus = query_phylogeny[-1]
+			
+			# determine the species and subspecies strings for the query sequence
+			#query_species, query_subspecies = get_deep_phylogeny(query_name)
+			if len(query_phylogeny) == 1:
 
-	# find and compare phylogeny of current hit to phylogeny of query
-	for hit in hit_accessions:
+				raise CPULimitError("----- ERROR: CPU limit reached...retry query -----")
+			
 
-		hit_phylogeny = []
-		hit_name = hit[3].splitlines()[0]
-		
-		hit[2] = hit[2] + ';'
+			query_genus = query_phylogeny[-1]
 
-		# parses the phylogeny string into a list (query_phylogeny)
-		last_break = 0
-		for index, c in enumerate(hit[2]):
+			# find and compare phylogeny of current hit to phylogeny of query
+			for hit in hit_accessions:
 
-			if c == ';':
+				hit_phylogeny = []
+				hit_name = hit[3].splitlines()[0]
+				
+				hit[2] = hit[2] + ';'
 
-				current_level = hit[2][last_break:index]
+				# parses the phylogeny string into a list (query_phylogeny)
+				last_break = 0
+				for index, c in enumerate(hit[2]):
 
-				hit_phylogeny.append(current_level)
+					if c == ';':
 
-				last_break = index + 1
-				last_break = index + 1
+						current_level = hit[2][last_break:index]
 
-		# --------------------------------------------------------------------
-		# compares the hit phylogeny list to the query phylogeny list
+						hit_phylogeny.append(current_level)
 
-		closest_relation = compare_hit_to_query_phylogeny(hit_phylogeny, query_phylogeny, hit_name, query_species, query_subspecies)
+						last_break = index + 1
+						last_break = index + 1
 
-		if closest_relation == 'subspecies':
+				# --------------------------------------------------------------------
+				# compares the hit phylogeny list to the query phylogeny list
 
-			Subspecies.append(hit)
+				closest_relation = compare_hit_to_query_phylogeny(hit_phylogeny, query_phylogeny, hit_name, query_species, query_subspecies)
 
-		elif closest_relation == 'species':
+				if closest_relation == 'subspecies':
 
-			Species.append(hit)
+					Subspecies.append(hit)
 
-		elif closest_relation == 'genus':
+				elif closest_relation == 'species':
 
-			Genus.append(hit)
+					Species.append(hit)
 
-		elif closest_relation == 'subfamily':
+				elif closest_relation == 'genus':
 
-			Subfamily.append(hit)
+					Genus.append(hit)
 
-		elif closest_relation == 'family':
+				elif closest_relation == 'subfamily':
 
-			Family.append(hit)
+					Subfamily.append(hit)
 
-		else:
+				elif closest_relation == 'family':
 
-			Other.append(hit)
+					Family.append(hit)
 
-	# ---------------------------------
-	# output hit file data
+				else:
 
-	# if there is no subspecies name
-	if len(query_subspecies) > 0:
+					Other.append(hit)
 
-		output_path = '%sPHYLO_DATA/%s/(%sh_%sm_%ss)%s_%s_%s/' % (result_output_directory(os.getcwd()), today, hour, minute, second, query_genus, query_species, query_subspecies)
+			# ---------------------------------
+			# output hit file data
 
-	else:
+			# if there is no subspecies name
+			if len(query_subspecies) > 0:
 
-		output_path = '%sPHYLO_DATA/%s/(%sh_%sm_%ss)%s_%s_%s/' % (result_output_directory(os.getcwd()), today, hour, minute, second, query_genus, query_species, 'NO-SUBSPECIES')
+				output_path = '%sPHYLO_DATA/%s/(%sh_%sm_%ss)%s_%s_%s/' % (result_output_directory(os.getcwd()), today, hour, minute, second, query_genus, query_species, query_subspecies)
 
-	output_phylo(Subspecies, 'Subspecies', output_path)
-	output_phylo(Species, 'Species', output_path)
-	output_phylo(Genus, 'Genus', output_path)
-	output_phylo(Subfamily, 'Subfamily', output_path)
-	output_phylo(Family, 'Family', output_path)
-	output_phylo(Other, 'Other', output_path)
+			else:
 
-	summary_data = summarize_query(Other, Family, Subfamily, Genus, Species, Subspecies, query_name, query_database)
-	summary_path = output_path + 'summary.txt'
+				output_path = '%sPHYLO_DATA/%s/(%sh_%sm_%ss)%s_%s_%s/' % (result_output_directory(os.getcwd()), today, hour, minute, second, query_genus, query_species, 'NO-SUBSPECIES')
 
-	summary_save = open(summary_path, 'w')
-	summary_save.write(summary_data)
-	summary_save.close
+			output_phylo(Subspecies, 'Subspecies', output_path)
+			output_phylo(Species, 'Species', output_path)
+			output_phylo(Genus, 'Genus', output_path)
+			output_phylo(Subfamily, 'Subfamily', output_path)
+			output_phylo(Family, 'Family', output_path)
+			output_phylo(Other, 'Other', output_path)
+
+			summary_data = summarize_query(Other, Family, Subfamily, Genus, Species, Subspecies, query_name, query_database)
+			summary_path = output_path + 'summary.txt'
+
+			summary_save = open(summary_path, 'w')
+			summary_save.write(summary_data)
+			summary_save.close
+
+		except CPULimitError, e:
+
+			continue
+
+		genbank_successful = True
 
 # compares the phylogenetic information from the query and hit and returns the closest level of 
 # phylogenetic relation between the two sequences
@@ -993,10 +1006,8 @@ def strip_incorrect_chars(hit):
 
 	return new_hit
 
-# returns the pwd, minus two levels of depth
+# returns the pwd, minus three levels of depth
 def result_output_directory(current_directory):
-
-	print current_directory
 
 	rev_dir = current_directory[::-1]
 
@@ -1008,7 +1019,7 @@ def result_output_directory(current_directory):
 
 	for c in rev_dir:
 
-		if count == 2:
+		if count == 3:
 
 			rev_result += rev_dir[rev_dir.index(c):]
 			
@@ -1053,16 +1064,8 @@ def main():
 		print '\n----- FASTA Input -----\n '
 
 		select_files()
-
-		try:
-			handle_requests(query_database, 'fasta', None)
-			parse_queries(query_database, query_species, query_subspecies)
-
-		except CPULimitError, e:
-
-			print 'Connection error. Reconnecting with GenBank ...'
-
-			parse_queries(query_database, query_species, query_subspecies)
+		handle_requests(query_database, 'fasta', None)
+		parse_queries(query_database, query_species, query_subspecies)
 
 		print '\n----- Complete! -----\n '
 
@@ -1070,16 +1073,8 @@ def main():
 
 		print '\n---- Accession Input -----\n '
 
-		try:
-
-			handle_requests(query_database, 'accession', query_accession)
-			parse_queries(query_database, query_species, query_subspecies)
-
-		except CPULimitError, e:
-
-			print 'Connection error. Reconnecting with GenBank ...'
-
-			parse_queries(query_database, query_species, query_subspecies)
+		handle_requests(query_database, 'accession', query_accession)
+		parse_queries(query_database, query_species, query_subspecies)
 
 		print '\n----- Complete! -----\n '
 
@@ -1087,16 +1082,8 @@ def main():
 
 		print '\n---- Cross BLAST Accession Input -----\n '
 
-		try:
-
-			handle_requests(query_database, 'cross', query_accession)
-			parse_queries(query_database, query_species, query_subspecies)
-
-		except CPULimitError, e:
-			
-			print 'Connection error. Reconnecting with GenBank ...'
-
-			parse_queries(query_database, query_species, query_subspecies)
+		handle_requests(query_database, 'cross', query_accession)
+		parse_queries(query_database, query_species, query_subspecies)
 
 		print '\n----- Complete! -----\n '
 
