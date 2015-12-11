@@ -93,9 +93,9 @@ def select_files():
 
 # processes each of the individual queries stored in the queries array from
 # 'select_files()'
-def handle_requests(query_type, input_type, passed_accession_number):
+def handle_requests(query_database, input_type, passed_accession_number):
 
-	print '\nQuerying NCBI database ({0}) ...'.format(query_type)
+	print '\nQuerying NCBI database ({0}) ...'.format(query_database)
 
 	if input_type == 'fasta':
 
@@ -105,7 +105,7 @@ def handle_requests(query_type, input_type, passed_accession_number):
 
 			fasta_string = open(query).read()
 
-			fasta_result_handle = NCBIWWW.qblast(program='blastn', database=query_type, sequence=fasta_string)
+			fasta_result_handle = NCBIWWW.qblast(program='blastn', database=query_database, sequence=fasta_string)
 
 			# saves the xml result of the BLAST query
 			save_xml_file(fasta_result_handle)
@@ -120,7 +120,7 @@ def handle_requests(query_type, input_type, passed_accession_number):
 
 		fasta_string = record
 
-		fasta_result_handle = NCBIWWW.qblast(program='blastn', database=query_type, sequence=fasta_string)
+		fasta_result_handle = NCBIWWW.qblast(program='blastn', database=query_database, sequence=fasta_string)
 
 		# saves the xml result of the BLAST query
 		save_xml_file(fasta_result_handle)
@@ -135,7 +135,7 @@ def handle_requests(query_type, input_type, passed_accession_number):
 
 		fasta_string = record
 
-		fasta_result_handle = NCBIWWW.qblast(program='blastn', database=query_type, sequence=fasta_string)
+		fasta_result_handle = NCBIWWW.qblast(program='blastn', database=query_database, sequence=fasta_string)
 
 		# saves the xml result of the BLAST query
 		save_xml_file(fasta_result_handle)
@@ -168,7 +168,7 @@ def save_xml_file(query_object):
 	# FASTA sequence
 	# Phylogeny
 	# % identity to query seq
-def parse_queries(query_type, query_species, query_subspecies):
+def parse_queries(query_database, query_species, query_subspecies):
 
 	print '\nparsing ...'
 
@@ -234,7 +234,7 @@ def parse_queries(query_type, query_species, query_subspecies):
 
 		print '\nQuerying GenBank ...'
 
-		all_accessions, full_hit_seqs = query_genbank(query_name, query_type)
+		all_accessions, full_hit_seqs = query_genbank(query_name, query_database)
 
 		print '\nOutputting Results ...'
 
@@ -248,14 +248,14 @@ def parse_queries(query_type, query_species, query_subspecies):
 		# sorts the hits by their phylogenetic relation to query
 		# outputs final hit and query data to file directory
 		print '\nSorting hits by Phylogeny ...'
-		sort_by_phylogeny(query_species, query_subspecies, query_type)
+		sort_by_phylogeny(query_species, query_subspecies, query_database)
 		# -----------------------------------------------------------------
 
 # sorts the unique hits by phylogeny and outputs the results in
 		# Family, Subfamily, Genus, Species determinations of relationship
 		# with filenames beginning with % divergence from the query sequence
 		#		divergence = (100 - identity) / 2
-def sort_by_phylogeny(query_species, query_subspecies, query_type):
+def sort_by_phylogeny(query_species, query_subspecies, query_database):
 
 	Family = []
 	Subfamily = []
@@ -377,7 +377,7 @@ def sort_by_phylogeny(query_species, query_subspecies, query_type):
 	output_phylo(Family, 'Family', output_path)
 	output_phylo(Other, 'Other', output_path)
 
-	summary_data = summarize_query(Other, Family, Subfamily, Genus, Species, Subspecies, query_name, query_type)
+	summary_data = summarize_query(Other, Family, Subfamily, Genus, Species, Subspecies, query_name, query_database)
 	summary_path = output_path + 'summary.txt'
 
 	summary_save = open(summary_path, 'w')
@@ -620,7 +620,7 @@ def get_genus_from_name(query_name):
 #	Phylogenetic level
 #		% divergence from query | accession number
 #			(descending)
-def summarize_query(Other, Family, Subfamily, Genus, Species, Subspecies, query_name, query_type):
+def summarize_query(Other, Family, Subfamily, Genus, Species, Subspecies, query_name, query_database):
 
 	summary = ''
 
@@ -628,12 +628,12 @@ def summarize_query(Other, Family, Subfamily, Genus, Species, Subspecies, query_
 	summary_header += '\n ---------------------------------------------- \n'
 
 	summary += summary_header
-	summary += summarize_level(Other, 'Other', query_name, query_type)
-	summary += summarize_level(Family, 'Family', query_name, query_type)
-	summary += summarize_level(Subfamily, 'Subfamily', query_name, query_type)
-	summary += summarize_level(Genus, 'Genus', query_name, query_type)
-	summary += summarize_level(Species, 'Species', query_name, query_type)
-	summary += summarize_level(Subspecies, 'Subspecies', query_name, query_type)
+	summary += summarize_level(Other, 'Other', query_name, query_database)
+	summary += summarize_level(Family, 'Family', query_name, query_database)
+	summary += summarize_level(Subfamily, 'Subfamily', query_name, query_database)
+	summary += summarize_level(Genus, 'Genus', query_name, query_database)
+	summary += summarize_level(Species, 'Species', query_name, query_database)
+	summary += summarize_level(Subspecies, 'Subspecies', query_name, query_database)
 
 	# TODO consolidate excel outputs into single file
 	#consolidate_result_files()
@@ -642,7 +642,7 @@ def summarize_query(Other, Family, Subfamily, Genus, Species, Subspecies, query_
 
 	return summary
 
-def summarize_level(hits, level, query_name, query_type):
+def summarize_level(hits, level, query_name, query_database):
 
 	level_summary = ''
 	
@@ -699,7 +699,7 @@ def summarize_level(hits, level, query_name, query_type):
 		sheet1.write(index + 1, 3, hit[3])
 		sheet1.write(index + 1, 4, level)
 
-	save_path = '{0}Excel_Hits/{1}/{2}_({3}h{4}m{5}s)_{6}/'.format(result_output_directory(os.getcwd()), today, query_type, hour, minute, second, query_name[21:])
+	save_path = '{0}Excel_Hits/{1}/{2}_({3}h{4}m{5}s)_{6}/'.format(result_output_directory(os.getcwd()), today, query_database, hour, minute, second, query_name[21:])
 	
 	# make dir if it doesn't already exist
 	if not os.path.exists(save_path):
@@ -824,7 +824,7 @@ def get_deep_phylogeny(query_name):
 # queries GenBank for all of the hits in hit_accessions (with duplicates removed) to
 # obtain the FASTA sequence and phylogenetic information for each hit
 #		also returns the list of all accession numbers for file output
-def query_genbank(query_name, query_type):
+def query_genbank(query_name, query_database):
 
 	# aggregator for all the accession numbers
 	all_accessions = ''
@@ -863,7 +863,7 @@ def query_genbank(query_name, query_type):
 		save_file.write(phylo_handle.read())
 		save_file.close()
 
-		phylo_path = get_phylo(file_name, query_type)
+		phylo_path = get_phylo(file_name, query_database)
 
 		# get the full fasta sequence of the hit (not just the homologous region)
 		current_fasta = handle.read()
@@ -910,14 +910,14 @@ def remove_duplicate_hits(accessions):
 	
 
 # returns the phylogenetic information of the given hit
-def get_phylo(xml_file, query_type):
+def get_phylo(xml_file, query_database):
 
 	# grabs the phylogeny of the hit sequence
 	tree = ET.parse(xml_file)
 	root = tree.getroot()
 
 	# location is different if seq is a reference genome
-	if query_type == 'refseq':
+	if query_database == 'refseq':
 
 		phylo = root[0][16].text
 
@@ -1040,7 +1040,7 @@ def main():
 	# defines the type of run that will be completed
 	# i.e. FASTA, accession #, or w.e.
 	input_type = sys.argv[1]
-	query_type = sys.argv[2]
+	query_database = sys.argv[2]
 	query_species = sys.argv[3]
 	query_subspecies = sys.argv[4]
 	query_accession = sys.argv[5]
@@ -1053,8 +1053,16 @@ def main():
 		print '\n----- FASTA Input -----\n '
 
 		select_files()
-		handle_requests(query_type, 'fasta', None)
-		parse_queries(query_type, query_species, query_subspecies)
+
+		try:
+			handle_requests(query_database, 'fasta', None)
+			parse_queries(query_database, query_species, query_subspecies)
+
+		except CPULimitError, e:
+
+			print 'Connection error. Reconnecting with GenBank ...'
+
+			parse_queries(query_database, query_species, query_subspecies)
 
 		print '\n----- Complete! -----\n '
 
@@ -1064,14 +1072,14 @@ def main():
 
 		try:
 
-			handle_requests(query_type, 'accession', query_accession)
-			parse_queries(query_type, query_species, query_subspecies)
+			handle_requests(query_database, 'accession', query_accession)
+			parse_queries(query_database, query_species, query_subspecies)
 
 		except CPULimitError, e:
 
 			print 'Connection error. Reconnecting with GenBank ...'
 
-			parse_queries(query_type, query_species, query_subspecies)
+			parse_queries(query_database, query_species, query_subspecies)
 
 		print '\n----- Complete! -----\n '
 
@@ -1079,8 +1087,14 @@ def main():
 
 		print '\n---- Cross BLAST Accession Input -----\n '
 
-		handle_requests(query_type, 'cross', query_accession)
-		parse_queries(query_type, query_species, query_subspecies)
+		try:
+
+			handle_requests(query_database, 'cross', query_accession)
+			parse_queries(query_database, query_species, query_subspecies)
+
+		print 'Connection error. Reconnecting with GenBank ...'
+
+			parse_queries(query_database, query_species, query_subspecies)
 
 		print '\n----- Complete! -----\n '
 
@@ -1093,34 +1107,6 @@ if __name__ == "__main__":
     main()
 
 '''
-
-def test_main():
-
-	# clears the current terminal shell
-	os.system("clear")
-
-	# skips the BLAST query to speed up debug time
-	dir_path = result_output_directory(os.getcwd())
-	#file_path = dir_path + 'BLAST_QUERIES/15_11_12/query_15_11_12_(23h58m14s).xml' # cervus nippon taiouanus
-	#file_path = dir_path + 'BLAST_QUERIES/15_11_12/query_15_11_12_(21h44m38s).xml' # anguilla australis
-	#file_path = dir_path + 'BLAST_QUERIES/15_11_13/query_15_11_13_(0h20m32s).xml' # anguilla bicolor bicolor
-	#file_path = dir_path + 'BLAST_QUERIES/15_11_13/query_15_11_13_(0h38m21s).xml' # anguilla australis schmidti
-	#file_path = dir_path + 'BLAST_QUERIES/15_11_13/query_15_11_13_(0h45m56s).xml' # gallus gallus gallus
-	#file_path = dir_path + 'BLAST_QUERIES/15_11_13/query_15_11_13_(0h59m43s).xml' # gallus gallus spadiceus
-	#file_path = dir_path + 'BLAST_QUERIES/15_11_13/query_15_11_13_(1h3m44s).xml' # oncorhynchus masou ishikawae
-	#file_path = dir_path + 'BLAST_QUERIES/15_11_13/query_15_11_13_(1h53m54s).xml' # ursus thibetanus formosanus
-	#file_path = dir_path + 'BLAST_QUERIES/15_11_13/query_15_11_13_(2h15m12s).xml' # heterocephalus glaber
-	#file_path = dir_path + 'BLAST_QUERIES/15_11_13/query_15_11_13_(16h15m49s).xml' # homo sapiens (french)
-	file_path = dir_path + 'BLAST_QUERIES/15_11_18/query_15_11_18_(16h3m44s).xml' # cervus nippon yesoensis (REF_SEQs ONLY)
-	xml_results.append(file_path)
-	parse_queries(query_type)
-	consolidate_result_files()
-
-	print '\nComplete!'
-
-test_main()
-
-
 
  TODO
 	[ ] Figure out how to re-enter species / subspecies names if mistyped that doesn't

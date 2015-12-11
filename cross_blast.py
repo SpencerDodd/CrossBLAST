@@ -10,8 +10,9 @@ from Bio import Entrez
 
 class CrossBlast:
 
-	def __init__(self, request_path, accessions, query_names):
+	def __init__(self, request_database, request_path, accessions, query_names):
 
+		self.request_database = request_database
 		self.request_path = request_path
 		self.accessions = accessions
 		self.query_names = query_names
@@ -68,7 +69,7 @@ class CrossBlast:
 			species = self.query_names[index][0]
 			subspecies = self.query_names[index][1]
 
-			call(['python', 'BLAST_Accession.py', 'cross', species, subspecies, accession])
+			call(['python', 'blast_accession.py', 'cross', request_database, species, subspecies, accession])
 
 # requires user interaction to determine the query sequence's species and subspecies strings
 #		NOT available through GenBank query
@@ -119,6 +120,8 @@ def main():
 	# clears the current terminal shell
 	os.system("clear")
 
+	query_database = sys.argv[1]
+
 	request = CrossBlast(None, [], [])
 	request.select_sequences()
 	request.get_accessions()
@@ -130,9 +133,6 @@ if __name__ == '__main__':
 	main()
 
 
-# TODO
-#	[ ] Change BLAST_Accession.py to input species and subspecies info at the beginning
-#		of the blasting as a main[x] input
 
 
 
