@@ -147,7 +147,7 @@ def save_xml_file(query_object):
 
 
 	# output file to folder "BLAST_QUERIES", 2 levels back from pwd
-	file_path = '%sBLAST_QUERIES/%s/' % (result_output_directory(os.getcwd()), today)
+	file_path = '%sBLAST_QUERIES/' % (result_output_directory(os.getcwd()))
 
 	# make dir if it doesn't already exist
 	if not os.path.exists(file_path):
@@ -172,96 +172,64 @@ def parse_queries(query_database, query_species, query_subspecies, query_type):
 
 	print '\nparsing ...'
 
-	genbank_successful = False
+	for file in xml_results:
 
-	while not genbank_successful:
+		print '\nopening file ...'
+		result_handle = open(file)
 
-		try:
+		print '\nXML processing ...'
+		blast_record = NCBIXML.read(result_handle)
 
-			for file in xml_results:
+		query_name = ''
 
-				print '\nopening file ...'
-				result_handle = open(file)
+		hit_num = 0
 
-				print '\nXML processing ...'
-				blast_record = NCBIXML.read(result_handle)
+		blast_qresult = SearchIO.read(file, 'blast-xml')
+		for hit in blast_qresult:
 
-				query_name = ''
+			for hsp in hit:
 
-				hit_num = 0
+				if hit_num == 0:
 
-				blast_qresult = SearchIO.read(file, 'blast-xml')
-				for hit in blast_qresult:
+						query_name = hit.description
 
-					'''
-					# DEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUG
-					# DEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUG
-					print 'ACCESSION: ', hit.accession
-					print 'SEQ LEN: ', hit.seq_len
-					# DEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUG
-					# DEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUG
-					'''
+				# calculate the % identity of the hit to the query sequence
+				hit_identity = ((1.0 * hsp.ident_num / hsp.aln_span) * 100)
 
-					for hsp in hit:
+				# add accession numbers to the hit_accessions array
+				hit_accessions.append( [hit.accession, hit_identity] )
 
-						if hit_num == 0:
+				hit_num += 1
+		
+		# remove duplicate hits from hit_accessions
+		print '\nConsolidating duplicate hits ...'
+		
+		remove_duplicate_hits(hit_accessions)
 
-								query_name = hit.description
+		print '\nDone'
 
-						# calculate the % identity of the hit to the query sequence
-						hit_identity = ((1.0 * hsp.ident_num / hsp.aln_span) * 100)
+		# for each accession number in the hit_accessions:
+			# get the FASTA sequence
+			# get the phylogeny
 
-						# add accession numbers to the hit_accessions array
-						hit_accessions.append( [hit.accession, hit_identity] )
+		print '\nQuerying GenBank ...'
 
-						'''
-						# DEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUG
-						# DEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUG
-						print 'identity: ', hsp.ident_num
-						print 'aln_span: ', hsp.aln_span
-						print 'Percent ID: ', hit_identity
-						print 'hit_num: ', hit_num
-						# DEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUG
-						# DEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUG
-						'''
+		all_accessions, full_hit_seqs = query_genbank(query_name, query_database)
 
-						hit_num += 1
-				
-				# remove duplicate hits from hit_accessions
-				print '\nConsolidating duplicate hits ...'
-				
-				remove_duplicate_hits(hit_accessions)
+		print '\nOutputting Results ...'
 
-				print '\nDone'
+		output_full_hits(query_name, full_hit_seqs, all_accessions)
 
-				# for each accession number in the hit_accessions:
-					# get the FASTA sequence
-					# get the phylogeny
+		# remove hits that are not full sequences (sequence length < 16000)
+		print '\nRemoving incomplete sequences ...'
 
-				print '\nQuerying GenBank ...'
-
-				all_accessions, full_hit_seqs = query_genbank(query_name, query_database)
-
-				print '\nOutputting Results ...'
-
-				output_full_hits(query_name, full_hit_seqs, all_accessions)
-
-				# remove hits that are not full sequences (sequence length < 16000)
-				print '\nRemoving incomplete sequences ...'
-
-				# ----------------------------------------- SORTS HITS BY PHYLOGENY
-				# -----------------------------------------------------------------
-				# sorts the hits by their phylogenetic relation to query
-				# outputs final hit and query data to file directory
-				print '\nSorting hits by Phylogeny ...'
-				sort_by_phylogeny(query_species, query_subspecies, query_database, query_type)
-				# -----------------------------------------------------------------
-
-		except:
-
-			continue
-
-		genbank_successful = True
+		# ----------------------------------------- SORTS HITS BY PHYLOGENY
+		# -----------------------------------------------------------------
+		# sorts the hits by their phylogenetic relation to query
+		# outputs final hit and query data to file directory
+		print '\nSorting hits by Phylogeny ...'
+		sort_by_phylogeny(query_species, query_subspecies, query_database, query_type)
+		# -----------------------------------------------------------------
 
 # sorts the unique hits by phylogeny and outputs the results in
 		# Family, Subfamily, Genus, Species determinations of relationship
@@ -283,15 +251,6 @@ def sort_by_phylogeny(query_species, query_subspecies, query_database, query_typ
 	# find the phylogeny of the query sequence
 	# % identity = 100
 	for hit in hit_accessions:
-
-		'''
-		# DEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUG
-		# DEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUG
-		print 'Name: {0}'.format(hit[3].splitlines()[0])
-		print 'Phylogeny: {0}'.format(hit[2])
-		# DEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUG
-		# DEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUG
-		'''
 
 		if hit[1] == 100.0:
 
@@ -381,11 +340,11 @@ def sort_by_phylogeny(query_species, query_subspecies, query_database, query_typ
 	# if there is no subspecies name
 	if len(query_subspecies) > 0:
 
-		output_path = '%sPHYLO_DATA/%s/(%sh_%sm_%ss)%s_%s_%s/' % (result_output_directory(os.getcwd()), today, hour, minute, second, query_genus, query_species, query_subspecies)
+		output_path = '%sPHYLO_DATA/' % (result_output_directory(os.getcwd()))
 
 	else:
 
-		output_path = '%sPHYLO_DATA/%s/(%sh_%sm_%ss)%s_%s_%s/' % (result_output_directory(os.getcwd()), today, hour, minute, second, query_genus, query_species, 'NO-SUBSPECIES')
+		output_path = '%sPHYLO_DATA/' % (result_output_directory(os.getcwd()))
 
 	output_phylo(Subspecies, 'Subspecies', output_path)
 	output_phylo(Species, 'Species', output_path)
@@ -426,27 +385,6 @@ def compare_hit_to_query_phylogeny(hit_phylogeny, query_phylogeny, hit_name, que
 	if len(query_phylogeny) == 1:
 		
 		query_genus = get_genus_from_name(query_phylogeny[-1])
-
-	'''
-	# DEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUG
-	# DEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUG
-	print '\n---------------------------------------'
-	print 'QUERY GENUS: %r' % query_genus
-	print 'QUERY GENUS (pre-parsed): %r' % query_phylogeny[-1]
-	print 'QUERY PHYLOGENY: %r' % query_phylogeny
-	print 'HIT PHYLOGENY: %r' % hit_phylogeny
-	print 'Length query phylo: {0}'.format(len(query_phylogeny))
-	print 'Length hit phylo: {0}'.format(len(hit_phylogeny))
-
-	print 'Query name: %r	|	Hit genus: %r	|	Hit name: %r' % (query_phylogeny[-1], hit_phylogeny[-1], hit_name)
-
-	print 'Hit name: %r' % hit_name
-	print 'Query subspecies: %r' % query_subspecies.replace(' ', '')
-	print 'Query species: %r' % query_species.replace(' ', '')
-	print 'Query genus: %r' % query_phylogeny[-1].replace(' ', '').lower()
-	# DEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUG
-	# DEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUG
-	'''
 
 	# if the genus, species, and subspecies names are the same in query
 	# ex: gallus gallus gallus
@@ -718,7 +656,7 @@ def summarize_level(hits, level, query_name, query_database):
 		sheet1.write(index + 1, 3, hit[3])
 		sheet1.write(index + 1, 4, level)
 
-	save_path = '{0}Excel_Hits/{1}/{2}_({3}h{4}m{5}s)_{6}/'.format(result_output_directory(os.getcwd()), today, query_database, hour, minute, second, query_name[21:])
+	save_path = '{0}Excel_Hits/'.format(result_output_directory(os.getcwd()))
 	
 	# make dir if it doesn't already exist
 	if not os.path.exists(save_path):
@@ -845,60 +783,72 @@ def get_deep_phylogeny(query_name):
 #		also returns the list of all accession numbers for file output
 def query_genbank(query_name, query_database):
 
+	querying = True
+
 	# aggregator for all the accession numbers
 	all_accessions = ''
 	# aggregator for all of the fetched FASTA sequences
 	full_hit_seqs = ''
 
-	for index, hit in enumerate(hit_accessions):
+	while querying:
 
-		accession_num = hit[0]
+		try:
 
-		print '	Querying sequence {0} ({1} / {2})'.format(accession_num, (index + 1), len(hit_accessions))
+			for index, hit in enumerate(hit_accessions):
 
-		# saves the accession number in file for debugging or future reference
-		all_accessions += (accession_num + '\n')
+				accession_num = hit[0]
 
-		# look up the accession number in GenBank database and download
-		# the fasta sequence for that accession number
-		handle = Entrez.efetch(db='nucleotide', id=accession_num, rettype='fasta')
+				print '	Querying sequence {0} ({1} / {2})'.format(accession_num, (index + 1), len(hit_accessions))
 
-		# ------------- PHYLOGENETIC INFORMTION -----------------
-		# -------------------------------------------------------
-		# get the organism phylogeny from genbank
-		phylo_handle = Entrez.efetch(db='nucleotide', id=accession_num, rettype='gb', retmode='xml')
+				# saves the accession number in file for debugging or future reference
+				all_accessions += (accession_num + '\n')
 
-		# output file to folder "GENBANK_DATA", 1 level back from pwd
-		file_path = '%sGENBANK_DATA/%s/' % (result_output_directory(os.getcwd()), today)
+				# look up the accession number in GenBank database and download
+				# the fasta sequence for that accession number
+				handle = Entrez.efetch(db='nucleotide', id=accession_num, rettype='fasta')
 
-		# make dir if it doesn't already exist
-		if not os.path.exists(file_path):
+				# ------------- PHYLOGENETIC INFORMTION -----------------
+				# -------------------------------------------------------
+				# get the organism phylogeny from genbank
+				phylo_handle = Entrez.efetch(db='nucleotide', id=accession_num, rettype='gb', retmode='xml')
 
-			os.makedirs(file_path)
+				# output file to folder "GENBANK_DATA", 1 level back from pwd
+				file_path = '%sGENBANK_DATA/' % (result_output_directory(os.getcwd()))
 
-		file_name = '%squery_%s_hit_%s_(%sh%sm%ss).xml' % (file_path, query_name, accession_num, hour, minute, second)
+				# make dir if it doesn't already exist
+				if not os.path.exists(file_path):
 
-		save_file = open(file_name, 'w')
-		save_file.write(phylo_handle.read())
-		save_file.close()
+					os.makedirs(file_path)
 
-		phylo_path = get_phylo(file_name, query_database)
+				file_name = '%squery_%s_hit_%s_(%sh%sm%ss).xml' % (file_path, query_name, accession_num, hour, minute, second)
 
-		# get the full fasta sequence of the hit (not just the homologous region)
-		current_fasta = handle.read()
+				save_file = open(file_name, 'w')
+				save_file.write(phylo_handle.read())
+				save_file.close()
 
-		# add the fasta sequence and phylo path to hit_accessions
-		hit_accessions[hit_accessions.index(hit)].append(phylo_path)
-		hit_accessions[hit_accessions.index(hit)].append(current_fasta)
+				phylo_path = get_phylo(file_name, query_database)
 
-		# -------------------------------------------------------
-		# -------------------------------------------------------
+				# get the full fasta sequence of the hit (not just the homologous region)
+				current_fasta = handle.read()
 
-		
+				# add the fasta sequence and phylo path to hit_accessions
+				hit_accessions[hit_accessions.index(hit)].append(phylo_path)
+				hit_accessions[hit_accessions.index(hit)].append(current_fasta)
 
-		full_hit_seqs += current_fasta
+				# -------------------------------------------------------
+				# -------------------------------------------------------
 
-	return all_accessions, full_hit_seqs
+				
+
+				full_hit_seqs += current_fasta
+
+			return all_accessions, full_hit_seqs
+
+		except:
+
+			query_genbank(query_name, query_database)
+
+		querying = False
 
 # consolidates duplicate accession numbers in the BLAST query hits to get accurate identity %s
 def remove_duplicate_hits(accessions):
@@ -979,7 +929,7 @@ def output_full_hits(seq_name, all_hits, all_accessions):
 
 		seq_name = seq_name[:75]
 
-	file_path = '%sBLAST_HITS/%s/%s(%sh%sm%ss)/' % (result_output_directory(os.getcwd()), today, seq_name, hour, minute, second)
+	file_path = '%sBLAST_HITS/' % (result_output_directory(os.getcwd()))
 
 	# make dir if it doesn't already exist
 	if not os.path.exists(file_path):
@@ -1122,9 +1072,10 @@ if __name__ == "__main__":
 
 TODO
 
+	[ ] Add species and subspecies data to csv summary files
+	[ ] Fix file output locations
 	[ ] Make so that sequences that only have species and no subspecies match on genus level, not species level
 		[ ] nearly impossible...
-	[ ] Fix file output locations
 	[ ] Place CPULimitError exception in parse_queries (where it should be first detected)
 	[x] Place a Genbank connection error in 
 	[ ] Figure out how to re-enter species / subspecies names if mistyped that doesn't
