@@ -108,11 +108,11 @@ def handle_requests(query_database, input_type, query_accession):
 
 		os.makedirs(file_path)
 
-	file_name = '%squery_%s_(%sh%sm%ss).xml' % (file_path, today, hour, minute, second)
-
 	if input_type == 'fasta':
 
+		attempt_num = 1
 		failed_attempt = True
+		file_name = '{0}query_(attempt_{1})_({2}h{3}m{4}s).xml'.format(file_path, attempt_num, hour, minute, second)
 
 		while failed_attempt:
 
@@ -124,6 +124,9 @@ def handle_requests(query_database, input_type, query_accession):
 
 				fasta_result_handle = NCBIWWW.qblast(program='blastn', database=query_database, sequence=fasta_string)
 
+				# removes any previous XML results
+				del xml_results[:]
+
 				# saves the xml result of the BLAST query
 				save_xml_file(file_name, fasta_result_handle)
 
@@ -131,9 +134,16 @@ def handle_requests(query_database, input_type, query_accession):
 				# a non-failed attempt should break loop
 				failed_attempt = cpu_usage_error(file_name)
 
+				attempt_num += 1
+
+		# stores the file name for xml parsing later (only if query was successful)
+		xml_results.append(file_name)
+
 	elif input_type == 'accession': # TODOTODOTODOTODO
 
+		attempt_num = 1
 		failed_attempt = True
+		file_name = '{0}query_(attempt_{1})_({2}h{3}m{4}s).xml'.format(file_path, attempt_num, hour, minute, second)
 
 		while failed_attempt:
 
@@ -143,9 +153,14 @@ def handle_requests(query_database, input_type, query_accession):
 
 			print '\nQuerying for sequence {0}: '.format(record.splitlines()[0])
 
+			print '\nAttempt {0}'.format(attempt_num)
+
 			fasta_string = record
 
 			fasta_result_handle = NCBIWWW.qblast(program='blastn', database=query_database, sequence=fasta_string)
+
+			# removes any previous XML results
+			del xml_results[:]
 
 			# saves the xml result of the BLAST query
 			save_xml_file(file_name, fasta_result_handle)
@@ -153,10 +168,17 @@ def handle_requests(query_database, input_type, query_accession):
 			# failed_attempt is true if the BLAST result returned a CPU usage error
 			# a non-failed attempt should break loop
 			failed_attempt = cpu_usage_error(file_name)
+
+			attempt_num += 1
+
+		# stores the file name for xml parsing later (only if query was successful)
+		xml_results.append(file_name)
 
 	elif input_type == 'cross':
 
+		attempt_num = 1
 		failed_attempt = True
+		file_name = '{0}query_(attempt_{1})_({2}h{3}m{4}s).xml'.format(file_path, attempt_num, hour, minute, second)
 
 		while failed_attempt:
 
@@ -170,12 +192,20 @@ def handle_requests(query_database, input_type, query_accession):
 
 			fasta_result_handle = NCBIWWW.qblast(program='blastn', database=query_database, sequence=fasta_string)
 
+			# removes any previous XML results
+			del xml_results[:]
+
 			# saves the xml result of the BLAST query
 			save_xml_file(file_name, fasta_result_handle)
 
 			# failed_attempt is true if the BLAST result returned a CPU usage error
 			# a non-failed attempt should break loop
 			failed_attempt = cpu_usage_error(file_name)
+
+			attempt_num += 1
+
+		# stores the file name for xml parsing later (only if query was successful)
+		xml_results.append(file_name)
 
 # checks to see if global variable hit_accessions is not filled with a CPU usage limit error
 # returns true if the XML file it is fed contains the error
@@ -189,21 +219,24 @@ def cpu_usage_error(file_name):
 
 		hits.append(hit.accession)
 
-	if len(hit_accessions) == 0:
+	if len(hits) == 0:
 
-		print 'BLAST CPU ERROR'
+		print '\n---- BLAST CPU ERROR ----'
 
-		print 'Re-trying BLAST query ...'
+		print '\nRe-trying BLAST query ...'
 
 		return True
+
+	else:
+
+		print '\n---- Success ----'
+
+		return False
 
 # saves the current XML query object to a file
 def save_xml_file(file_name, query_object):
 
 	print '\nSaving XML results ...'
-	
-	# stores the file name for xml parsing later
-	xml_results.append(file_name)
 
 	save_file = open(file_name, 'w')
 	save_file.write(query_object.read())
@@ -1010,21 +1043,41 @@ def result_output_directory(current_directory):
 
 	count = 0
 
-	for index, c in enumerate(rev_dir):
+	if input_type == 'cross':
 
-		if count == 2:
+		for index, c in enumerate(rev_dir):
 
-			rev_index = len(current_directory) - (index)
-			
-			result = current_directory[:rev_index]
+			if count == 2:
 
-			result += '/Results/{0}/{1}_{2}_{3}_({4}h_{5}m_{6}s)/'.format(today, query_species, query_subspecies, query_database, hour, minute, second)
+				rev_index = len(current_directory) - (index)
+				
+				result = current_directory[:rev_index]
 
-			return result
+				result += '/Results/{0}/CrossBLAST_({1}h_{2}m_{3}s)/{4}_{5}_{6}/'.format(today, hour, minute, second, query_species, query_subspecies, query_database)
 
-		elif c == '/':
+				return result
 
-			count += 1
+			elif c == '/':
+
+				count += 1
+
+	else:
+
+		for index, c in enumerate(rev_dir):
+
+			if count == 2:
+
+				rev_index = len(current_directory) - (index)
+				
+				result = current_directory[:rev_index]
+
+				result += '/Results/{0}/SingleBLAST_({1}h_{2}m_{3}s)/{4}_{5}_{6}/'.format(today, hour, minute, second, query_species, query_subspecies, query_database)
+
+				return result
+
+			elif c == '/':
+
+				count += 1
 
 # TODO
 # consolidates all of the Excel output files into a single summary output csv file
