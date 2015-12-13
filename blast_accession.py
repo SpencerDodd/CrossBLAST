@@ -58,7 +58,9 @@ Families = [
 	'Ursidae',				# asian black bear
 	'Salmonidae',			# salmon
 	'Phasianidae',			# red junglefowl
-	'Hominidae'				# human / hominids
+	'Hominidae',			# human / hominids
+	'Muridae',				# Mouse
+	'Balaena'				# Bowhead whale
 ]
 Subfamilies = [
 	'Cervinae',				# deer
@@ -68,7 +70,8 @@ Subfamilies = [
 	'Procervulinae',		# deer
 	'Heterocephalinae', 	# NMR
 	'Salmoninae',			# salmon
-	'Phasianidae'			# red junglefowl
+	'Phasianidae',			# red junglefowl
+	'Murinae'				# Mouse
 ]
 # -------------------------------------------
 
@@ -93,58 +96,9 @@ def select_files():
 
 # processes each of the individual queries stored in the queries array from
 # 'select_files()'
-def handle_requests(query_database, input_type, passed_accession_number):
+def handle_requests(query_database, input_type, query_accession):
 
 	print '\nQuerying NCBI database ({0}) ...'.format(query_database)
-
-	if input_type == 'fasta':
-
-		for index, query in enumerate(queries):
-
-			print '\nQuerying for sequence {0}: {1}'.format((index + 1), query)
-
-			fasta_string = open(query).read()
-
-			fasta_result_handle = NCBIWWW.qblast(program='blastn', database=query_database, sequence=fasta_string)
-
-			# saves the xml result of the BLAST query
-			save_xml_file(fasta_result_handle)
-
-	elif input_type == 'accession':
-
-		handle = Entrez.efetch(db='nucleotide', id=passed_accession_number, rettype='fasta')
-
-		record = handle.read()
-
-		print '\nQuerying for sequence {0}: '.format(record.splitlines()[0])
-
-		fasta_string = record
-
-		fasta_result_handle = NCBIWWW.qblast(program='blastn', database=query_database, sequence=fasta_string)
-
-		# saves the xml result of the BLAST query
-		save_xml_file(fasta_result_handle)
-
-	elif input_type == 'cross':
-
-		handle = Entrez.efetch(db='nucleotide', id=passed_accession_number, rettype='fasta')
-
-		record = handle.read()
-
-		print '\nQuerying for sequence {0}: '.format(record.splitlines()[0])
-
-		fasta_string = record
-
-		fasta_result_handle = NCBIWWW.qblast(program='blastn', database=query_database, sequence=fasta_string)
-
-		# saves the xml result of the BLAST query
-		save_xml_file(fasta_result_handle)
-
-# saves the current XML query object to a file
-def save_xml_file(query_object):
-
-	print '\nSaving XML results ...'
-
 
 	# output file to folder "BLAST_QUERIES", 2 levels back from pwd
 	file_path = '%sBLAST_QUERIES/' % (result_output_directory(os.getcwd()))
@@ -155,6 +109,98 @@ def save_xml_file(query_object):
 		os.makedirs(file_path)
 
 	file_name = '%squery_%s_(%sh%sm%ss).xml' % (file_path, today, hour, minute, second)
+
+	if input_type == 'fasta':
+
+		failed_attempt = True
+
+		while failed_attempt:
+
+			for index, query in enumerate(queries):
+
+				print '\nQuerying for sequence {0}: {1}'.format((index + 1), query)
+
+				fasta_string = open(query).read()
+
+				fasta_result_handle = NCBIWWW.qblast(program='blastn', database=query_database, sequence=fasta_string)
+
+				# saves the xml result of the BLAST query
+				save_xml_file(file_name, fasta_result_handle)
+
+				# failed_attempt is true if the BLAST result returned a CPU usage error
+				# a non-failed attempt should break loop
+				failed_attempt = cpu_usage_error(file_name)
+
+	elif input_type == 'accession': # TODOTODOTODOTODO
+
+		failed_attempt = True
+
+		while failed_attempt:
+
+			handle = Entrez.efetch(db='nucleotide', id=query_accession, rettype='fasta')
+
+			record = handle.read()
+
+			print '\nQuerying for sequence {0}: '.format(record.splitlines()[0])
+
+			fasta_string = record
+
+			fasta_result_handle = NCBIWWW.qblast(program='blastn', database=query_database, sequence=fasta_string)
+
+			# saves the xml result of the BLAST query
+			save_xml_file(file_name, fasta_result_handle)
+
+			# failed_attempt is true if the BLAST result returned a CPU usage error
+			# a non-failed attempt should break loop
+			failed_attempt = cpu_usage_error(file_name)
+
+	elif input_type == 'cross':
+
+		failed_attempt = True
+
+		while failed_attempt:
+
+			handle = Entrez.efetch(db='nucleotide', id=query_accession, rettype='fasta')
+
+			record = handle.read()
+
+			print '\nQuerying for sequence {0}: '.format(record.splitlines()[0])
+
+			fasta_string = record
+
+			fasta_result_handle = NCBIWWW.qblast(program='blastn', database=query_database, sequence=fasta_string)
+
+			# saves the xml result of the BLAST query
+			save_xml_file(file_name, fasta_result_handle)
+
+			# failed_attempt is true if the BLAST result returned a CPU usage error
+			# a non-failed attempt should break loop
+			failed_attempt = cpu_usage_error(file_name)
+
+# checks to see if global variable hit_accessions is not filled with a CPU usage limit error
+# returns true if the XML file it is fed contains the error
+def cpu_usage_error(file_name):
+
+	hits = []
+
+	blast_qresult = SearchIO.read(file_name, 'blast-xml')
+
+	for hit in blast_qresult:
+
+		hits.append(hit.accession)
+
+	if len(hit_accessions) == 0:
+
+		print 'BLAST CPU ERROR'
+
+		print 'Re-trying BLAST query ...'
+
+		return True
+
+# saves the current XML query object to a file
+def save_xml_file(file_name, query_object):
+
+	print '\nSaving XML results ...'
 	
 	# stores the file name for xml parsing later
 	xml_results.append(file_name)
@@ -270,15 +316,6 @@ def sort_by_phylogeny(query_species, query_subspecies, query_database, query_typ
 
 			# add query name to the variable
 			query_name = hit[3].splitlines()[0]
-
-	
-	# If the CPU limit was reached on NCBI servers, retry the query until it goes through
-	if len(query_phylogeny) == 1:
-
-		print "----- ERROR: CPU limit reached -----"
-		print " Retrying BLAST query ..."
-		handle_requests(query_database, query_type, passed_accession_number)
-	
 
 	# determine the species and subspecies strings for the query sequence
 	#query_species, query_subspecies = get_deep_phylogeny(query_name)
@@ -1005,9 +1042,11 @@ def consolidate_result_files():
 def main():
 
 	# sets values to global for naming dirs for result output
+	global input_type
 	global query_species
 	global query_subspecies
 	global query_database
+	global query_accession
 
 	# defines the type of run that will be completed
 	# i.e. FASTA, accession #, or w.e.
@@ -1078,15 +1117,47 @@ if __name__ == "__main__":
 
 TODO
 
+	[ ] Set global variables / shell arguments to default values that get overridden if user inputs values
 	[ ] Add species and subspecies data to csv summary files
-	[ ] Fix file output locations
+	[ ] Fix this error in terminal output (on successful run and not in correct spot in procedure): [NOW IN LINE 127]
+			
+			<output>
+
+				...
+				...
+				Querying sequence NC_013611 (49 / 50)
+				Querying sequence NC_013605 (50 / 50)
+
+			Outputting Results ...
+
+			Writing output files ...
+
+			Removing incomplete sequences ...
+
+			Sorting hits by Phylogeny ...
+			
+			----- ERROR: CPU limit reached -----
+			
+			Retrying BLAST query ...
+
+			Querying NCBI database (refseq_genomic) ...
+
+			----- Complete! -----
+			
+			</output>
+
+		[ ] ALSO RELATED:
+
+			fix the query_phylogeny[-1] error [NOW IN LINE 127]
+			CPULimitError exception location [NOW IN LINE 127]
+
 	[ ] Make so that sequences that only have species and no subspecies match on genus level, not species level
 		[ ] nearly impossible...
-	[ ] Place CPULimitError exception in parse_queries (where it should be first detected)
-	[x] Place a Genbank connection error in 
 	[ ] Figure out how to re-enter species / subspecies names if mistyped that doesn't
 		result in mis-formatted file-output and query_species / query_subspecies data
 		entries.
+	[x] Place a Genbank connection error in
+	[x] Fix file output locations
 
 '''
 

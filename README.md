@@ -18,7 +18,7 @@ python blast_accession.py INPUT_TYPE QUERY_DATABASE QUERY_SPECIES_NAME QUERY_SUB
 ```
 
 ###### Arguments:
-####### input value : explanation
+###### input value : explanation
 
 ```INPUT_TYPE``` is the style in which the query data will be given to the script
 
