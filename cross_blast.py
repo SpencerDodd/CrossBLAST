@@ -4,6 +4,11 @@ import Tkinter, tkFileDialog
 import csv
 from subprocess import call
 from Bio import Entrez
+import datetime
+
+hour = datetime.datetime.today().time().hour
+minute = datetime.datetime.today().time().minute
+second = datetime.datetime.today().time().second
 
 # blasts all species-related sequences and accumulates distances for calulation
 # 	of minimums and maximums
@@ -87,11 +92,14 @@ class CrossBlast:
 			species = self.query_names[index][0]
 			subspecies = self.query_names[index][1]
 
-			call(['python', 'blast_accession.py', 'cross', self.query_database, species, subspecies, accession, str((index + 1)), str(len(self.accessions))])
+			call(['python', 'blast_accession.py', 'cross', self.query_database, species, subspecies, accession, str((index + 1)), str(len(self.accessions)), (origin_species + '_' + origin_subspecies), str(hour), str(minute), str(second)])
 
 # requires user interaction to determine the query sequence's species and subspecies strings
 #		NOT available through GenBank query
 def get_deep_phylogeny(query_name, index):
+
+	global origin_species
+	global origin_subspecies
 
 	querying_species = True
 	querying_subspecies = True
@@ -108,6 +116,7 @@ def get_deep_phylogeny(query_name, index):
 		if correct.lower() == 'y' or correct.lower == 'yes':
 
 			species = current_species
+			origin_species = current_species
 
 			querying_species = False
 
@@ -123,6 +132,7 @@ def get_deep_phylogeny(query_name, index):
 			if sub_correct.lower() == 'y' or sub_correct.lower() == 'yes':
 
 				subspecies = current_subspecies
+				origin_subspecies = current_subspecies
 
 				querying_subspecies = False
 
@@ -182,6 +192,7 @@ if __name__ == '__main__':
 TODO
 
 	[ ] species will be the same...don't ask for it, just subspecies
+	[ ] add 'y/n' options to presence of subspecies
 
 
 

@@ -120,6 +120,8 @@ def handle_requests(query_database, input_type, query_accession):
 
 				print '\nQuerying for sequence {0}: {1}'.format((index + 1), query)
 
+				print '\nAttempt {0}'.format(attempt_num)
+
 				fasta_string = open(query).read()
 
 				fasta_result_handle = NCBIWWW.qblast(program='blastn', database=query_database, sequence=fasta_string)
@@ -188,6 +190,8 @@ def handle_requests(query_database, input_type, query_accession):
 
 			print '\nQuerying for sequence {0}: '.format(record.splitlines()[0])
 
+			print '\nAttempt {0}'.format(attempt_num)
+
 			fasta_string = record
 
 			fasta_result_handle = NCBIWWW.qblast(program='blastn', database=query_database, sequence=fasta_string)
@@ -211,15 +215,14 @@ def handle_requests(query_database, input_type, query_accession):
 # returns true if the XML file it is fed contains the error
 def cpu_usage_error(file_name):
 
-	hits = []
+	tree = ET.parse(file_name)
+	root = tree.getroot()
 
-	blast_qresult = SearchIO.read(file_name, 'blast-xml')
+	# parses the query's database number from the xml file
+	query_db = root[8][0][5][0][0].text
 
-	for hit in blast_qresult:
-
-		hits.append(hit.accession)
-
-	if len(hits) == 0:
+	# if there is a CPU error
+	if len(root[8][0]) == 7:
 
 		print '\n---- BLAST CPU ERROR ----'
 
@@ -227,9 +230,16 @@ def cpu_usage_error(file_name):
 
 		return True
 
-	else:
+	# if there was no database reply from the algorithm, but query wasn't rejected
+	# (Empty results)
+	elif len(root[8][0]) == 6 and query_db == '0':
 
-		print '\n---- Success ----'
+		print '\n---- Other BLAST ERROR (No Results for query) ----'
+
+		return True
+
+	# if the query went successfully
+	else:
 
 		return False
 
@@ -651,7 +661,7 @@ def summarize_query(Other, Family, Subfamily, Genus, Species, Subspecies, query_
 
 	summary = ''
 
-	summary_header = 'Percent diff.|    Accession #  |  Seq Length  |   Name    '
+	summary_header = 'Percent div to common anc.|    Accession #  |  Seq Length  |   Name    '
 	summary_header += '\n ---------------------------------------------- \n'
 
 	summary += summary_header
@@ -714,7 +724,7 @@ def summarize_level(hits, level, query_name, query_database):
 	# set the column labels
 	sheet1.write(0, 0, 'Accession')
 	sheet1.write(0, 1, 'Name')
-	sheet1.write(0, 2, 'Percent_difference')
+	sheet1.write(0, 2, 'Percent_div_to_common_ancestor')
 	sheet1.write(0, 3, 'Seq_length')
 	sheet1.write(0, 4, 'Level')
 
@@ -1053,7 +1063,7 @@ def result_output_directory(current_directory):
 				
 				result = current_directory[:rev_index]
 
-				result += '/Results/{0}/CrossBLAST_({1}h_{2}m_{3}s)/{4}_{5}_{6}/'.format(today, hour, minute, second, query_species, query_subspecies, query_database)
+				result += '/Results/{0}/CrossBLAST_{1}_({2}h_{3}m_{4}s)/{5}_{6}_{7}/'.format(today, cross_blast_query_name, cross_hour, cross_minute, cross_second, query_species, query_subspecies, query_database)
 
 				return result
 
@@ -1071,7 +1081,7 @@ def result_output_directory(current_directory):
 				
 				result = current_directory[:rev_index]
 
-				result += '/Results/{0}/SingleBLAST_({1}h_{2}m_{3}s)/{4}_{5}_{6}/'.format(today, hour, minute, second, query_species, query_subspecies, query_database)
+				result += '/Results/{0}/SingleBLAST_{1}_{2}_({3}h_{4}m_{5}s)/{6}_{7}_{8}/'.format(today, query_species, query_subspecies, hour, minute, second, query_species, query_subspecies, query_database)
 
 				return result
 
@@ -1100,6 +1110,10 @@ def main():
 	global query_subspecies
 	global query_database
 	global query_accession
+	global cross_blast_query_name
+	global cross_hour
+	global cross_minute
+	global cross_second
 
 	# defines the type of run that will be completed
 	# i.e. FASTA, accession #, or w.e.
@@ -1112,6 +1126,14 @@ def main():
 	cross_blast_seq_num = sys.argv[6]
 	# total number of sequences being cross-blasted
 	cross_blast_seq_total = sys.argv[7]
+	# name of cross blast original query sequence
+	cross_blast_query_name = sys.argv[8]
+	# hour of cross blast
+	cross_hour = sys.argv[9]
+	# minute of cross blast
+	cross_minute = sys.argv[10]
+	# second of cross blast
+	cross_second = sys.argv[11]
 
 	# clears the current terminal shell
 	os.system("clear")
