@@ -4,6 +4,8 @@
 
 This is a rough script that I have been using to do genomic research with automated BLAST queries. If you've stumbled on this page, the code isn't too pretty...I'm a biologist first, programmer second. I'm working on cleaning, fixing, and reorganizing it, but that's taking a backseat to data generation at the moment.
 
+# OVERVIEW AND FOLLOWING INFO IS OUTDATED AS OF 12/14/15
+
 ## Overview
 
 Here's a quick rundown of what each script does, and future functionality that it will have in coming iterations.

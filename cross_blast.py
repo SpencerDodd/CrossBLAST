@@ -6,6 +6,7 @@ from subprocess import call
 from Bio import Entrez
 import datetime
 
+today = datetime.datetime.today().strftime('%y_%m_%d')
 hour = datetime.datetime.today().time().hour
 minute = datetime.datetime.today().time().minute
 second = datetime.datetime.today().time().second
@@ -91,8 +92,48 @@ class CrossBlast:
 			accession = self.accessions[index]
 			species = self.query_names[index][0]
 			subspecies = self.query_names[index][1]
+			file_path = output_directory(species, subspecies, query_database)
 
-			call(['python', 'blast_accession.py', 'cross', self.query_database, species, subspecies, accession, str((index + 1)), str(len(self.accessions)), (origin_species + '_' + origin_subspecies), str(hour), str(minute), str(second)])
+			# clears the current terminal shell
+			os.system("clear")
+
+			print 'Querying sequence {0} / {1}'.format(index + 1, len(self.accessions))
+
+			call(['python', 'blast_accession.py', 'cross', self.query_database, species, subspecies, accession, file_path])
+
+# returns the pwd, minus three levels of depth
+def output_directory(species, subspecies, query_database):
+
+	current_directory = os.getcwd()
+
+	rev_dir = current_directory[::-1]
+
+	rev_result = ''
+
+	# so that we can use this dir to condense the results and produce histograms from
+	global result
+	result = ''
+
+	count = 0
+
+	for index, c in enumerate(rev_dir):
+
+		if count == 2:
+
+			rev_index = len(current_directory) - (index)
+			
+			result = current_directory[:rev_index]
+
+			# variables for filenaming
+			cross_blast_query_name = str(species) + '_' + str(subspecies)
+			
+			result += '/Results/{0}/CrossBLAST_{1}_({2}h_{3}m_{4}s)/{5}_{6}_{7}/'.format(today, cross_blast_query_name, hour, minute, second, species, subspecies, query_database)
+
+			return result
+
+		elif c == '/':
+
+			count += 1
 
 # requires user interaction to determine the query sequence's species and subspecies strings
 #		NOT available through GenBank query
@@ -175,6 +216,7 @@ def main():
 	# clears the current terminal shell
 	os.system("clear")
 
+	global query_database
 	query_database = sys.argv[1]
 
 	request = CrossBlast(query_database, None, [], [])
@@ -182,6 +224,12 @@ def main():
 	request.get_accessions()
 	request.get_phylo_info()
 	request.blast_accessions()
+
+	# condenses the result files automatically into a single csv
+	condense_results(output_directory(species, subspecies, query_database))
+
+	# creates histogram image for the result
+	hist_results(output_directory(species, subspecies, query_database))
 
 if __name__ == '__main__':
 
@@ -193,6 +241,8 @@ TODO
 
 	[ ] species will be the same...don't ask for it, just subspecies
 	[ ] add 'y/n' options to presence of subspecies
+	[ ] make so that full cross_blast will run off of a single accession number
+	[ ] tie condense_results.py and hist_results.py into this script
 
 
 

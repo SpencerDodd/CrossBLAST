@@ -3,8 +3,6 @@ import numpy as np
 import csv
 import sys
 
-test_file = '/Users/spencerdodd/Desktop/Summary_15_11_28_(14h_18m_10s).csv'
-
 class HistogramParser:
 
 	def __init__(self, other, family, subfamily, genus, species, subspecies):
@@ -77,27 +75,40 @@ class HistogramParser:
 
 					bin_max = level_max
 
-		bins = np.linspace(0, bin_max, 100)
+		bins = np.linspace(0, bin_max, 200)
 
 		for index, level in enumerate(levels):
 
 			if len(level) > 0:
 				
-				plt.hist(level, bins, alpha = 0.5, label = level_names[index])
+				plt.hist(level, bins, alpha = 0.5, label = '{0} (Range: {1} to {2})'.format(level_names[index], min(level), max(level)))
 
 		plt.ylabel('Frequency')
 		plt.xlabel('Percent dist to common ancestor')
 		plt.title('Overview')
 		plt.legend(loc = 'upper right')
-		plt.savefig('/Users/spencerdodd/Desktop/Overview.png')
+		plt.savefig('{0}Overview.png'.format(results_dir))
 
 def main():
 
+	global results_dir
+	results_dir = sys.argv[1]
+
 	parser = HistogramParser([], [], [], [], [], [])
-	parser.hist_parse(test_file)
+	parser.hist_parse('{0}Summary.csv'.format(results_dir))
 	parser.make_hists()
 
 main()
+
+'''
+TODO
+	
+	[ ] Add dynamic file_path argv and tie into the existing cross_blast / blast_accession framework
+
+'''
+
+
+
 
 
 

@@ -96,12 +96,24 @@ def handle_requests(query_database, input_type, query_accession):
 	print '\nQuerying NCBI database ({0}) ...'.format(query_database)
 
 	# output file to folder "BLAST_QUERIES", 2 levels back from pwd
-	file_path = '%sBLAST_QUERIES/' % (result_output_directory(os.getcwd()))
+	if input_type == 'accession':
+		
+		file_path = '{0}BLAST_QUERIES/'.format(result_output_directory(os.getcwd()))
 
-	# make dir if it doesn't already exist
-	if not os.path.exists(file_path):
+		# make dir if it doesn't already exist
+		if not os.path.exists(file_path):
 
-		os.makedirs(file_path)
+			os.makedirs(file_path)
+
+	# if input_type is cross
+	elif input_type == 'cross':
+
+		file_path = '{0}BLAST_QUERIES/'.format(output_file_path)
+
+		# make dir if it doesn't already exist
+		if not os.path.exists(file_path):
+
+			os.makedirs(file_path)
 
 	if input_type == 'fasta':
 
@@ -210,6 +222,10 @@ def handle_requests(query_database, input_type, query_accession):
 # returns true if the XML file it is fed contains the error
 def cpu_usage_error(file_name):
 
+	this_hour = datetime.datetime.today().time().hour
+	this_minute = datetime.datetime.today().time().minute
+	this_second = datetime.datetime.today().time().second
+
 	tree = ET.parse(file_name)
 	root = tree.getroot()
 
@@ -219,7 +235,7 @@ def cpu_usage_error(file_name):
 	# if there is a CPU error
 	if len(root[8][0]) == 7:
 
-		print '\n---- BLAST CPU ERROR ----'
+		print '\n---- BLAST CPU ERROR ({0}h {1}m {2}s) ----'.format(this_hour, this_minute, this_second)
 
 		print '\nRe-trying BLAST query ...'
 
@@ -230,7 +246,7 @@ def cpu_usage_error(file_name):
 	# Do not retry
 	elif len(root[8][0]) == 6 and query_db == '0':
 
-		print '\n---- Other BLAST ERROR (No Results for query) ----'
+		print '\n---- Other BLAST ERROR (No Results for query) ({0}h {1}m {2}s) ----'.format(this_hour, this_minute, this_second)
 
 		return False
 
@@ -413,14 +429,23 @@ def sort_by_phylogeny(query_species, query_subspecies, query_database, query_typ
 	# ---------------------------------
 	# output hit file data
 
-	# if there is no subspecies name
-	if len(query_subspecies) > 0:
+	if input_type > 'accession':
 
-		output_path = '%sPHYLO_DATA/' % (result_output_directory(os.getcwd()))
+		output_path = '{0}PHYLO_DATA/'.format(result_output_directory(os.getcwd()))
+
+		# make dir if it doesn't already exist
+		if not os.path.exists(output_path):
+
+			os.makedirs(output_path)
 
 	else:
 
-		output_path = '%sPHYLO_DATA/' % (result_output_directory(os.getcwd()))
+		output_path = '{0}PHYLO_DATA/'.format(output_file_path)
+
+		# make dir if it doesn't already exist
+		if not os.path.exists(output_path):
+
+			os.makedirs(output_path)
 
 	output_phylo(Subspecies, 'Subspecies', output_path)
 	output_phylo(Species, 'Species', output_path)
@@ -732,12 +757,26 @@ def summarize_level(hits, level, query_name, query_database):
 		sheet1.write(index + 1, 3, hit[3])
 		sheet1.write(index + 1, 4, level)
 
-	save_path = '{0}Excel_Hits/'.format(result_output_directory(os.getcwd()))
-	
-	# make dir if it doesn't already exist
-	if not os.path.exists(save_path):
+	save_path = ''
 
-		os.makedirs(save_path)
+	if input_type == 'accession':
+
+		save_path = '{0}Excel_Hits/'.format(result_output_directory(os.getcwd()))
+		
+		# make dir if it doesn't already exist
+		if not os.path.exists(save_path):
+
+			os.makedirs(save_path)
+
+	# cross_blasting (file_path given)
+	else:
+
+		save_path = '{0}Excel_Hits/'.format(output_file_path)
+
+		# make dir if it doesn't already exist
+		if not os.path.exists(save_path):
+
+			os.makedirs(save_path)
 
 	# save the file
 
@@ -874,8 +913,6 @@ def query_genbank(query_name, query_database):
 
 				accession_num = hit[0]
 
-				print '	Querying sequence {0} ({1} / {2})'.format(accession_num, (index + 1), len(hit_accessions))
-
 				# saves the accession number in file for debugging or future reference
 				all_accessions += (accession_num + '\n')
 
@@ -888,28 +925,55 @@ def query_genbank(query_name, query_database):
 				# get the organism phylogeny from genbank
 				phylo_handle = Entrez.efetch(db='nucleotide', id=accession_num, rettype='gb', retmode='xml')
 
-				# output file to folder "GENBANK_DATA", 1 level back from pwd
-				file_path = '%sGENBANK_DATA/' % (result_output_directory(os.getcwd()))
+				if input_type == 'accession':
 
-				# make dir if it doesn't already exist
-				if not os.path.exists(file_path):
+					# output file to folder "GENBANK_DATA", 1 level back from pwd
+					file_path = '{0}GENBANK_DATA/'.format(result_output_directory(os.getcwd()))
 
-					os.makedirs(file_path)
+					# make dir if it doesn't already exist
+					if not os.path.exists(file_path):
 
-				file_name = '%squery_%s_hit_%s_(%sh%sm%ss).xml' % (file_path, query_name, accession_num, hour, minute, second)
+						os.makedirs(file_path)
 
-				save_file = open(file_name, 'w')
-				save_file.write(phylo_handle.read())
-				save_file.close()
+					file_name = '{0}query_{1}_hit_{2}.xml'.format(file_path, query_name, accession_num)
 
-				phylo_path = get_phylo(file_name, query_database)
+					save_file = open(file_name, 'w')
+					save_file.write(phylo_handle.read())
+					save_file.close()
 
-				# get the full fasta sequence of the hit (not just the homologous region)
-				current_fasta = handle.read()
+					phylo_path = get_phylo(file_name, query_database)
 
-				# add the fasta sequence and phylo path to hit_accessions
-				hit_accessions[hit_accessions.index(hit)].append(phylo_path)
-				hit_accessions[hit_accessions.index(hit)].append(current_fasta)
+					# get the full fasta sequence of the hit (not just the homologous region)
+					current_fasta = handle.read()
+
+					# add the fasta sequence and phylo path to hit_accessions
+					hit_accessions[hit_accessions.index(hit)].append(phylo_path)
+					hit_accessions[hit_accessions.index(hit)].append(current_fasta)
+
+				# for cross_blasting
+				else:
+
+					file_path = '{0}GENBANK_DATA/'
+
+					# make dir if it doesn't already exist
+					if not os.path.exists(file_path):
+
+						os.makedirs(file_path)
+
+					file_name += 'query_{1}_hit_{2}.xml'.format(output_file_path, query_name, accession_num)
+
+					save_file = open(file_name, 'w')
+					save_file.write(phylo_handle.read())
+					save_file.close()
+
+					phylo_path = get_phylo(file_name, query_database)
+
+					# get the full fasta sequence of the hit (not just the homologous region)
+					current_fasta = handle.read()
+
+					# add the fasta sequence and phylo path to hit_accessions
+					hit_accessions[hit_accessions.index(hit)].append(phylo_path)
+					hit_accessions[hit_accessions.index(hit)].append(current_fasta)
 
 				# -------------------------------------------------------
 				# -------------------------------------------------------
@@ -946,9 +1010,6 @@ def remove_duplicate_hits(accessions):
 		hit_accession_replacements.append([accession, identity])
 
 		x += 1
-
-	# turn those consolidated identities into a hit % identity
-
 
 	# trim any remaining / duplicate values from hit_accessions
 	hit_accessions[:] = hit_accession_replacements
@@ -1005,25 +1066,32 @@ def output_full_hits(seq_name, all_hits, all_accessions):
 
 		seq_name = seq_name[:75]
 
-	file_path = '%sBLAST_HITS/' % (result_output_directory(os.getcwd()))
+	if input_type == 'accession':
+		
+		file_path = result_output_directory(os.getcwd())
 
-	# make dir if it doesn't already exist
-	if not os.path.exists(file_path):
+		# make dir if it doesn't already exist
+		if not os.path.exists(file_path):
 
-		os.makedirs(file_path)
+			os.makedirs(file_path)
 
-	result_file = '%s%s_FASTA.txt' % (file_path, 'full_hits')
-	accession_file = '%saccession_numbers.txt' % (file_path)
+		result_file = '{0}{1}_FASTA.txt'.format(file_path, 'full_hits')
 
-	print '\nWriting output files ...'
+		print '\nWriting output files ...'
 
-	save_file = open(result_file, 'w')
-	save_file.write(all_hits)
-	save_file.close()
+		save_file = open(result_file, 'w')
+		save_file.write(all_hits)
+		save_file.close()
 
-	save_accession_file = open(accession_file, 'w')
-	save_accession_file.write(all_accessions)
-	save_accession_file.close()
+	else:
+
+		result_file = '{0}{1}_FASTA.txt'.format(output_file_path, 'full_hits')
+
+		print '\nWriting output files ...'
+
+		save_file = open(result_file, 'w')
+		save_file.write(all_hits)
+		save_file.close()
 
 # strips a leading unicode defining character 'u' from the hit data
 def strip_incorrect_chars(hit):
@@ -1049,25 +1117,7 @@ def result_output_directory(current_directory):
 
 	count = 0
 
-	if input_type == 'cross':
-
-		for index, c in enumerate(rev_dir):
-
-			if count == 2:
-
-				rev_index = len(current_directory) - (index)
-				
-				result = current_directory[:rev_index]
-
-				result += '/Results/{0}/CrossBLAST_{1}_({2}h_{3}m_{4}s)/{5}_{6}_{7}/'.format(today, cross_blast_query_name, cross_hour, cross_minute, cross_second, query_species, query_subspecies, query_database)
-
-				return result
-
-			elif c == '/':
-
-				count += 1
-
-	else:
+	if input_type == 'accession':
 
 		for index, c in enumerate(rev_dir):
 
@@ -1106,10 +1156,7 @@ def main():
 	global query_subspecies
 	global query_database
 	global query_accession
-	global cross_blast_query_name
-	global cross_hour
-	global cross_minute
-	global cross_second
+	global output_file_path
 
 	# defines the type of run that will be completed
 	# i.e. FASTA, accession #, or w.e.
@@ -1118,23 +1165,12 @@ def main():
 	query_species = sys.argv[3]
 	query_subspecies = sys.argv[4]
 	query_accession = sys.argv[5]
-	# number of the current sequence
-	cross_blast_seq_num = sys.argv[6]
-	# total number of sequences being cross-blasted
-	cross_blast_seq_total = sys.argv[7]
-	# name of cross blast original query sequence
-	cross_blast_query_name = sys.argv[8]
-	# hour of cross blast
-	cross_hour = sys.argv[9]
-	# minute of cross blast
-	cross_minute = sys.argv[10]
-	# second of cross blast
-	cross_second = sys.argv[11]
+	output_file_path = sys.argv[6]
 
-	# clears the current terminal shell
-	os.system("clear")
+	# creates the result directory if it doesn't exist
+	if not os.path.exists(output_file_path):
 
-	print 'Querying sequence {0} / {1}'.format(cross_blast_seq_num, cross_blast_seq_total)
+		os.makedirs(output_file_path)
 
 	if input_type == 'F' or input_type == 'f':
 
@@ -1188,7 +1224,8 @@ if __name__ == "__main__":
 
 TODO
 
-	[ ] update readme to reflect new sys.argv[x] changes
+	[ ] ensure that all is working after updates to cross_blast -> blast_accession pipeline (esp. with file output)
+		[ ] need to make directories when they don't exist (inside the result dir)
 	[ ] Set global variables / shell arguments to default values that get overridden if user inputs values
 	[ ] Add species and subspecies data to csv summary files
 	[ ] Make so that sequences that only have species and no subspecies match on genus level, not species level

@@ -1,6 +1,7 @@
 import Tkinter, tkFileDialog
 import csv
 import os
+import sys
 import datetime
 
 # date and time information for writing to file
@@ -18,26 +19,18 @@ class Condenser:
 	# selects a number of files that will be condensed into a single file
 	def collect_files(self):
 
-		root = Tkinter.Tk()
-		root.withdraw()
-		file_paths = tkFileDialog.askopenfilenames()
+		for root, dirs, files in os.walk(directory_path):
 
-		for file in file_paths:
+			for file in files:
 
-			self.files.append(file)
+				if file.endswith('.csv'):
+
+					self.files.append('{0}/{1}'.format(root, file))
 
 	# condenses the contents of the selected files to a single file
 	def condense_results(self):
 
-		dir_path = one_directory_back(os.getcwd())
-		dir_path += 'Summaries/'
-
-		# make dir if it doesn't already exist
-		if not os.path.exists(dir_path):
-
-			os.makedirs(dir_path)
-
-		save_file = '{0}Summary_{1}_({2}h_{3}m_{4}s).csv'.format(dir_path, today, hour, minute, second)
+		save_file = '{0}Summary.csv'.format(directory_path)
 
 		with open(save_file, 'wb') as f:
 
@@ -67,7 +60,6 @@ class Condenser:
 								
 								c.writerow(row)
 
-
 # returns the pwd, minus one level of depth
 def one_directory_back(current_directory):
 
@@ -88,6 +80,9 @@ def one_directory_back(current_directory):
 			return result
 
 def main():
+
+	global directory_path
+	directory_path = sys.argv[1]
 
 	os.system('clear')
 
