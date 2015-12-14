@@ -48,7 +48,7 @@ minute = datetime.datetime.today().time().minute
 second = datetime.datetime.today().time().second
 
 # PHYLOGENETIC DEFINITIONS
-# Because the XML returns from qblast are kind of fucky, we need to look at 
+# Because the XML returns from qblast are info-sparse, we need to look at 
 # phylogenetic info and comparisons in weird ways
 
 Families = [
@@ -74,11 +74,6 @@ Subfamilies = [
 	'Murinae'				# Mouse
 ]
 # -------------------------------------------
-
-# Classes for handling different kinds of errors
-class CPULimitError(StandardError):
-
-	pass
 
 # allows user to select files to be processed for blast hits
 def select_files():
@@ -232,11 +227,12 @@ def cpu_usage_error(file_name):
 
 	# if there was no database reply from the algorithm, but query wasn't rejected
 	# (Empty results)
+	# Do not retry
 	elif len(root[8][0]) == 6 and query_db == '0':
 
 		print '\n---- Other BLAST ERROR (No Results for query) ----'
 
-		return True
+		return False
 
 	# if the query went successfully
 	else:
@@ -731,7 +727,7 @@ def summarize_level(hits, level, query_name, query_database):
 	for index, hit in enumerate(excel_hits):
 
 		sheet1.write(index + 1, 0, hit[0])
-		sheet1.write(index + 1, 1, hit[1])
+		sheet1.write(index + 1, 1, hit[1].replace(',', '')) # removes any commas that would disrupt csv parsing
 		sheet1.write(index + 1, 2, hit[2])
 		sheet1.write(index + 1, 3, hit[3])
 		sheet1.write(index + 1, 4, level)
@@ -1192,47 +1188,14 @@ if __name__ == "__main__":
 
 TODO
 
+	[ ] update readme to reflect new sys.argv[x] changes
 	[ ] Set global variables / shell arguments to default values that get overridden if user inputs values
 	[ ] Add species and subspecies data to csv summary files
-	[ ] Fix this error in terminal output (on successful run and not in correct spot in procedure): [NOW IN LINE 127]
-			
-			<output>
-
-				...
-				...
-				Querying sequence NC_013611 (49 / 50)
-				Querying sequence NC_013605 (50 / 50)
-
-			Outputting Results ...
-
-			Writing output files ...
-
-			Removing incomplete sequences ...
-
-			Sorting hits by Phylogeny ...
-			
-			----- ERROR: CPU limit reached -----
-			
-			Retrying BLAST query ...
-
-			Querying NCBI database (refseq_genomic) ...
-
-			----- Complete! -----
-			
-			</output>
-
-		[ ] ALSO RELATED:
-
-			fix the query_phylogeny[-1] error [NOW IN LINE 127]
-			CPULimitError exception location [NOW IN LINE 127]
-
 	[ ] Make so that sequences that only have species and no subspecies match on genus level, not species level
-		[ ] nearly impossible...
+		- may need to make a part of manual data parsing with result .csv files
 	[ ] Figure out how to re-enter species / subspecies names if mistyped that doesn't
 		result in mis-formatted file-output and query_species / query_subspecies data
 		entries.
-	[x] Place a Genbank connection error in
-	[x] Fix file output locations
 
 '''
 
