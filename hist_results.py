@@ -66,7 +66,7 @@ class HistogramParser:
 		colors = ['dodgerblue', 'cornflowerblue', 'deepskyblue', 'turquoise', 'cyan', 'lightgreen']
 		bin_max = 10
 
-		# finds the max value in the data set
+		# finds the max value in the data set to set histogram x-range size
 		for level in levels:
 
 			if len(level) > 0:
