@@ -7,6 +7,9 @@ from Bio import Entrez
 import datetime
 from twilio.rest import TwilioRestClient
 
+# email parameter for NCBI issues with access
+Entrez.email = 'dodd.s@husky.neu.edu'
+# time parameters
 start_time = datetime.datetime.now()
 today = datetime.datetime.today().strftime('%y_%m_%d')
 hour = datetime.datetime.today().time().hour
@@ -15,7 +18,6 @@ second = datetime.datetime.today().time().second
 
 # blasts all species-related sequences and accumulates distances for calulation
 # 	of minimums and maximums
-
 class CrossBlast:
 
 	def __init__(self, query_database, request_path, accessions, query_names):
@@ -39,16 +41,16 @@ class CrossBlast:
 		record = handle.read()
 		name = record.splitlines()[0]
 
-		global initial_species, initial_subspecies
-		initial_species, initial_subspecies = get_deep_phylogeny(name)
+		global initial_genus, initial_species, initial_subspecies
+		initial_genus, initial_species, initial_subspecies = get_deep_phylogeny(name, 'initial')
 
 		global initial_file_path
 		initial_file_path = output_initial_directory()
 
-		print '\n---- Querying Initial BLAST Sequence: {0} {1} ({2}) ----'.format(initial_species, initial_subspecies, initial_accession)
+		print '\n---- Querying Initial BLAST Sequence: {0} {1} {2} ({3}) ----'.format(initial_genus, initial_species, initial_subspecies, initial_accession)
 		
 		# update with progress
-		call(['python', 'send_update.py', 'CrossBLAST (initial sequence) {0}: {1} {2}'.format(initial_accession, initial_species, initial_subspecies)])
+		call(['python', 'send_update.py', 'CrossBLAST (initial sequence) {0}: {1} {2} {3}'.format(initial_accession, initial_genus, initial_species, initial_subspecies)])
 		# BLASTs
 		call(['python', 'blast_accession.py', 'cross', query_database, initial_species, initial_subspecies, initial_accession, initial_file_path])
 
@@ -80,7 +82,7 @@ class CrossBlast:
 			handle = Entrez.efetch(db='nucleotide', id=self.accessions[index], rettype='fasta')
 			record = handle.read()
 			name = record.splitlines()[0]
-			query_subspecies = get_deep_phylogeny(name)
+			query_subspecies = get_deep_phylogeny(name, 'cross')
 
 			self.query_names.append( [query_species_name, query_subspecies] )
 
@@ -97,10 +99,10 @@ class CrossBlast:
 			# clears the current terminal shell
 			os.system("clear")
 
-			print 'Querying sequence {0} / {1}'.format(index + 1, len(self.accessions))
+			print 'Querying sequence {0} of {1}'.format(index + 1, len(self.accessions))
 
 			# update with progress
-			call(['python', 'send_update.py', 'CrossBLAST-ing {0}: {1} {2} (Sequence {3} / {4}'.format(accession, species, subspecies, index + 1, len(self.accessions))])
+			call(['python', 'send_update.py', 'CrossBLAST-ing {0}: {1} {2} {3} (Sequence {4} of {5}'.format(accession, initial_genus, species, subspecies, index + 1, len(self.accessions))])
 			# BLAST
 			call(['python', 'blast_accession.py', 'cross', self.query_database, species, subspecies, accession, file_path])
 
@@ -175,40 +177,72 @@ def output_directory(species, subspecies, query_database):
 # Example:
 #		given: >gi|62184368|ref|NC_006915.1| Mus musculus molossinus mitochondrion, complete genome
 # 		returns: musculus, molossinus
-def get_deep_phylogeny(query_name):
+def get_deep_phylogeny(query_name, request_type):
 
 	phylogeny = []
 
 	column_count = 0
 	space_count = 0
 
-	for index, c in enumerate(query_name):
+	if request_type == 'initial':
 
-		if column_count == 4:
+		for index, c in enumerate(query_name):
 
-			query_remainder = query_name[index + 1:]
+			if column_count == 4:
 
-			break_point = 0
+				query_remainder = query_name[index + 1:]
 
-			for index, c in enumerate(query_remainder):
+				break_point = 0
 
-				if space_count == 3:
+				for index, c in enumerate(query_remainder):
 
-					# returns the 2nd and 3rd words in the name
-					# species and subspecies (or garbage for subspecies)
-					return phylogeny[1], phylogeny[2]
-					break
+					if space_count == 3:
 
-				elif c == ' ':
+						# returns the 2nd and 3rd words in the name
+						# species and subspecies (or garbage for subspecies)
+						return phylogeny[0], phylogeny[1], phylogeny[2]
+						break
 
-					phylo_section = query_remainder[break_point:index]
-					phylogeny.append(phylo_section)
-					break_point = index + 1
-					space_count += 1
+					elif c == ' ':
 
-		elif c == '|':
+						phylo_section = query_remainder[break_point:index]
+						phylogeny.append(phylo_section)
+						break_point = index + 1
+						space_count += 1
 
-			column_count += 1
+			elif c == '|':
+
+				column_count += 1
+
+	else:
+
+		for index, c in enumerate(query_name):
+
+			if column_count == 4:
+
+				query_remainder = query_name[index + 1:]
+
+				break_point = 0
+
+				for index, c in enumerate(query_remainder):
+
+					if space_count == 3:
+
+						# returns the 2nd and 3rd words in the name
+						# species and subspecies (or garbage for subspecies)
+						return phylogeny[1], phylogeny[2]
+						break
+
+					elif c == ' ':
+
+						phylo_section = query_remainder[break_point:index]
+						phylogeny.append(phylo_section)
+						break_point = index + 1
+						space_count += 1
+
+			elif c == '|':
+
+				column_count += 1
 
 def main():
 
@@ -238,10 +272,12 @@ def main():
 
 	end_time = datetime.datetime.now()
 
-	update_message = 'RUN COMPLETE! {0}: {1} {2}'.format(initial_accession, initial_species, initial_subspecies)
+	# send out and print completion notification
+	update_message = 'RUN COMPLETE! {0}: {1} {2} {3}'.format(initial_accession, initial_genus, initial_species, initial_subspecies)
 	update_message += '\n-----------'
 	update_message += '\nRuntime: {0}'.format(end_time - start_time)
 	call(['python', 'send_update.py', update_message])
+	print update_message
 
 if __name__ == '__main__':
 
