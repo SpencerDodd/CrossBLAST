@@ -5,7 +5,9 @@ import csv
 from subprocess import call
 from Bio import Entrez
 import datetime
+from twilio.rest import TwilioRestClient
 
+start_time = datetime.datetime.now()
 today = datetime.datetime.today().strftime('%y_%m_%d')
 hour = datetime.datetime.today().time().hour
 minute = datetime.datetime.today().time().minute
@@ -32,7 +34,7 @@ class CrossBlast:
 
 	# the initial BLAST run to generate the Species.csv that is used for cross_blasting
 	def initial_blast(self):
-
+		
 		handle = Entrez.efetch(db='nucleotide', id=initial_accession, rettype='fasta')
 		record = handle.read()
 		name = record.splitlines()[0]
@@ -44,7 +46,10 @@ class CrossBlast:
 		initial_file_path = output_initial_directory()
 
 		print '\n---- Querying Initial BLAST Sequence: {0} {1} ({2}) ----'.format(initial_species, initial_subspecies, initial_accession)
-
+		
+		# update with progress
+		call(['python', 'send_update.py', 'CrossBLAST (initial sequence) {0}: {1} {2}'.format(initial_accession, initial_species, initial_subspecies)])
+		# BLASTs
 		call(['python', 'blast_accession.py', 'cross', query_database, initial_species, initial_subspecies, initial_accession, initial_file_path])
 
 
@@ -94,6 +99,9 @@ class CrossBlast:
 
 			print 'Querying sequence {0} / {1}'.format(index + 1, len(self.accessions))
 
+			# update with progress
+			call(['python', 'send_update.py', 'CrossBLAST-ing {0}: {1} {2} (Sequence {3} / {4}'.format(accession, species, subspecies, index + 1, len(self.accessions))])
+			# BLAST
 			call(['python', 'blast_accession.py', 'cross', self.query_database, species, subspecies, accession, file_path])
 
 # returns the output directory of the initial query
@@ -201,7 +209,7 @@ def get_deep_phylogeny(query_name):
 		elif c == '|':
 
 			column_count += 1
-	
+
 def main():
 
 	# clears the current terminal shell
@@ -214,7 +222,7 @@ def main():
 
 	request = CrossBlast(query_database, None, [], [])
 
-	# initial BLAST run to get the species.csv TODO TODO TODO
+	# initial BLAST run to get the species.csv
 	request.initial_blast()
 	# now run the rest of the CrossBLAST
 	request.gather_sequences()
@@ -228,6 +236,13 @@ def main():
 	# creates histogram image for the result
 	hist_results(output_directory(initial_species, initial_subspecies, query_database))
 
+	end_time = datetime.datetime.now()
+
+	update_message = 'RUN COMPLETE! {0}: {1} {2}'.format(initial_accession, initial_species, initial_subspecies)
+	update_message += '\n-----------'
+	update_message += '\nRuntime: {0}'.format(end_time - start_time)
+	call(['python', 'send_update.py', update_message])
+
 if __name__ == '__main__':
 
 	main()
@@ -236,7 +251,10 @@ if __name__ == '__main__':
 
 TODO:
 
-	[ ]
+	[ ] add a log file so that if you leave it running on a box and SSH in you can
+		see the progress on the run / what remains
+
+		- could also update the sequence's BLAST folder name with a (COMPLETED) tag
 
 
 

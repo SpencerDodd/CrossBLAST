@@ -916,7 +916,33 @@ def query_genbank(query_name, query_database):
 				# get the organism phylogeny from genbank
 				phylo_handle = Entrez.efetch(db='nucleotide', id=accession_num, rettype='gb', retmode='xml')
 
-				if input_type == 'accession':
+				# for cross_blasting
+				if input_type == 'cross':
+
+					file_path = '{0}GENBANK_DATA/'.format(output_file_path)
+
+					# make dir if it doesn't already exist
+					if not os.path.exists(file_path):
+
+						os.makedirs(file_path)
+
+					file_name += 'query_{1}_hit_{2}.xml'.format(query_name, accession_num)
+
+					save_file = open(file_name, 'w')
+					save_file.write(phylo_handle.read())
+					save_file.close()
+
+					phylo_path = get_phylo(file_name, query_database)
+
+					# get the full fasta sequence of the hit (not just the homologous region)
+					current_fasta = handle.read()
+
+					# add the fasta sequence and phylo path to hit_accessions
+					hit_accessions[hit_accessions.index(hit)].append(phylo_path)
+					hit_accessions[hit_accessions.index(hit)].append(current_fasta)
+
+				# accession, genbank, or fasta blasting
+				else:
 
 					# output file to folder "GENBANK_DATA", 1 level back from pwd
 					file_path = '{0}GENBANK_DATA/'.format(result_output_directory(os.getcwd()))
@@ -940,37 +966,9 @@ def query_genbank(query_name, query_database):
 					# add the fasta sequence and phylo path to hit_accessions
 					hit_accessions[hit_accessions.index(hit)].append(phylo_path)
 					hit_accessions[hit_accessions.index(hit)].append(current_fasta)
-
-				# for cross_blasting
-				else:
-
-					file_path = '{0}GENBANK_DATA/'
-
-					# make dir if it doesn't already exist
-					if not os.path.exists(file_path):
-
-						os.makedirs(file_path)
-
-					file_name += 'query_{1}_hit_{2}.xml'.format(output_file_path, query_name, accession_num)
-
-					save_file = open(file_name, 'w')
-					save_file.write(phylo_handle.read())
-					save_file.close()
-
-					phylo_path = get_phylo(file_name, query_database)
-
-					# get the full fasta sequence of the hit (not just the homologous region)
-					current_fasta = handle.read()
-
-					# add the fasta sequence and phylo path to hit_accessions
-					hit_accessions[hit_accessions.index(hit)].append(phylo_path)
-					hit_accessions[hit_accessions.index(hit)].append(current_fasta)
-
 				# -------------------------------------------------------
 				# -------------------------------------------------------
-
 				
-
 				full_hit_seqs += current_fasta
 
 			return all_accessions, full_hit_seqs
@@ -1194,6 +1192,7 @@ def main():
 	elif input_type == 'genbank':
 
 		print '\n---- GenBank Query with BLAST XML Input -----\n '
+		input_type = 'accession'
 
 		root = Tkinter.Tk()
 		root.withdraw()
@@ -1218,6 +1217,9 @@ TODO
 	[ ] Manual data parsing with result .csv files to ensure that there is no
 		undesired subspecies <-> subspecies matching that is only labeled as species
 			*** due to lack of subspecific labeling on reference sequence
+
+	[ ] Change the design from a list of XML files and queries to a single request from
+		cross_blast.py
 
 '''
 
