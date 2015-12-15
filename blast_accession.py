@@ -2,6 +2,8 @@ __author__ = 'Spencer Dodd' # I almost don't want to take credit for this pasta
 
 # NOTE: It's spaghetti. God help your soul if you need to debug or maintain this.
 
+import warnings
+warnings.filterwarnings("ignore")
 import Tkinter, tkFileDialog
 import datetime
 import os
@@ -14,7 +16,6 @@ import xlrd
 import csv
 import xml.etree.ElementTree as ET
 import sys
-
 
 # -------------------------------------------
 # ------ ENSURE IS CORRECT BEFORE RUN! ------
