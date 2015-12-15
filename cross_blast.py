@@ -24,15 +24,29 @@ class CrossBlast:
 		self.query_names = query_names
 
 	# selects the output file with the sequences to blast
-	def select_sequences(self):
+	def gather_sequences(self):
 
-		print '\nSelect the .csv output file with the accessions you would like to blast\n'
+		print '\nGathering initial BLAST results ...\n'
 
-		root = Tkinter.Tk()
-		root.withdraw()
-		file_path = tkFileDialog.askopenfilename()
+		self.request_path = initial_file_path + 'Excel_hits/Species_hits.csv'
 
-		self.request_path = file_path
+	# the initial BLAST run to generate the Species.csv that is used for cross_blasting
+	def initial_blast(self):
+
+		handle = Entrez.efetch(db='nucleotide', id=initial_accession, rettype='fasta')
+		record = handle.read()
+		name = record.splitlines()[0]
+
+		global initial_species, initial_subspecies
+		initial_species, initial_subspecies = get_deep_phylogeny(name)
+
+		global initial_file_path
+		initial_file_path = output_initial_directory()
+
+		print '\n---- Querying Initial BLAST Sequence: {0} {1} ({2}) ----'.format(initial_species, initial_subspecies, initial_accession)
+
+		call(['python', 'blast_accession.py', 'cross', query_database, initial_species, initial_subspecies, initial_accession, initial_file_path])
+
 
 	# reads the accession numbers from the results file and adds to the accessions
 	# parameter of the CrossBlast object
@@ -54,35 +68,16 @@ class CrossBlast:
 
 		query_species_name = ''
 
-		for index, accession in enumerate(self.accessions):
+		for accession in self.accessions:
+			
+			print 'Sequence {0} of {1}'.format(index + 1, len(self.accessions))
 
-			if index == 0:
+			handle = Entrez.efetch(db='nucleotide', id=self.accessions[index], rettype='fasta')
+			record = handle.read()
+			name = record.splitlines()[0]
+			query_subspecies = get_deep_phylogeny(name)
 
-				print 'Sequence {0} of {1}'.format(index + 1, len(self.accessions))
-
-				handle = Entrez.efetch(db='nucleotide', id=self.accessions[index], rettype='fasta')
-
-				record = handle.read()
-
-				name = record.splitlines()[0]
-
-				query_species_name, query_subspecies = get_deep_phylogeny(name, index)
-
-				self.query_names.append( [query_species_name, query_subspecies] )
-
-			else:
-
-				print 'Sequence {0} of {1}'.format(index + 1, len(self.accessions))
-
-				handle = Entrez.efetch(db='nucleotide', id=self.accessions[index], rettype='fasta')
-
-				record = handle.read()
-
-				name = record.splitlines()[0]
-
-				query_subspecies = get_subspecies(name)
-
-				self.query_names.append( [query_species_name, query_subspecies] )
+			self.query_names.append( [query_species_name, query_subspecies] )
 
 	# blasts all of the collected accessions
 	def blast_accessions(self):
@@ -100,6 +95,38 @@ class CrossBlast:
 			print 'Querying sequence {0} / {1}'.format(index + 1, len(self.accessions))
 
 			call(['python', 'blast_accession.py', 'cross', self.query_database, species, subspecies, accession, file_path])
+
+# returns the output directory of the initial query
+def output_initial_directory():
+
+	current_directory = os.getcwd()
+
+	rev_dir = current_directory[::-1]
+
+	rev_result = ''
+
+	result = ''
+
+	count = 0
+
+	for index, c in enumerate(rev_dir):
+
+		if count == 2:
+
+			rev_index = len(current_directory) - (index)
+			
+			result = current_directory[:rev_index]
+
+			# variables for filenaming
+			cross_blast_query_name = str(initial_species) + '_' + str(initial_subspecies)
+			
+			result += '/Results/{0}/CrossBLAST_{1}_({2}h_{3}m_{4}s)/{5}/'.format(today, cross_blast_query_name, hour, minute, second, 'Initial')
+
+			return result
+
+		elif c == '/':
+
+			count += 1
 
 # returns the pwd, minus three levels of depth
 def output_directory(species, subspecies, query_database):
@@ -135,81 +162,45 @@ def output_directory(species, subspecies, query_database):
 
 			count += 1
 
-# requires user interaction to determine the query sequence's species and subspecies strings
-#		NOT available through GenBank query
-def get_deep_phylogeny(query_name, index):
+# auto-parses phylo information from the given string
+# returns second two words separated by spaces:
+# Example:
+#		given: >gi|62184368|ref|NC_006915.1| Mus musculus molossinus mitochondrion, complete genome
+# 		returns: musculus, molossinus
+def get_deep_phylogeny(query_name):
 
-	global origin_species
-	global origin_subspecies
+	phylogeny = []
 
-	querying_species = True
-	querying_subspecies = True
+	column_count = 0
+	space_count = 0
 
-	species = ''
-	subspecies = ''
+	for index, c in enumerate(query_name):
 
-	while querying_species:
+		if column_count == 4:
 
-		print '\n Query Sequence: {0}'.format(query_name)
-		current_species = raw_input('What is the species name of this organism? \n')
-		correct = raw_input('Is this the correct species name? (y / n): {0} \n'.format(current_species))
+			query_remainder = query_name[index + 1:]
 
-		if correct.lower() == 'y' or correct.lower == 'yes':
+			break_point = 0
 
-			species = current_species
-			origin_species = current_species
+			for index, c in enumerate(query_remainder):
 
-			querying_species = False
+				if space_count == 3:
 
-	while querying_subspecies:
+					# returns the 2nd and 3rd words in the name
+					# species and subspecies (or garbage for subspecies)
+					return phylogeny[1], phylogeny[2]
+					break
 
-		is_subspecies = raw_input('Is there a subspecies name of this organism? \n')
+				elif c == ' ':
 
-		if is_subspecies.lower() == 'y' or is_subspecies.lower() == 'yes':
+					phylo_section = query_remainder[break_point:index]
+					phylogeny.append(phylo_section)
+					break_point = index + 1
+					space_count += 1
 
-			current_subspecies = raw_input('What is the subspecies name of this organism? \n')
-			sub_correct = raw_input('Is this the correct subspecies name? (y / n): {0} \n'.format(current_subspecies))
+		elif c == '|':
 
-			if sub_correct.lower() == 'y' or sub_correct.lower() == 'yes':
-
-				subspecies = current_subspecies
-				origin_subspecies = current_subspecies
-
-				querying_subspecies = False
-
-		else:
-
-			querying_subspecies = False
-
-
-	return species, subspecies
-
-# just asks for the subspecies name if it isn't the first sequence
-def get_subspecies(query_name):
-
-	querying_subspecies = True
-
-	subspecies = ''
-
-	while querying_subspecies:
-
-		print '\n Query Sequence: {0}'.format(query_name)
-		current_subspecies = raw_input('What is the subspecies name of this organism? \n')
-		sub_correct = raw_input('Is this the correct subspecies name? (y / n): {0} \n'.format(current_subspecies))
-
-		if sub_correct.lower() == 'y' or sub_correct.lower() == 'yes':
-
-			subspecies = current_subspecies
-
-			querying_subspecies = False
-
-		else:
-
-			querying_subspecies = False
-
-
-	return subspecies
-
+			column_count += 1
 	
 def main():
 
@@ -217,19 +208,25 @@ def main():
 	os.system("clear")
 
 	global query_database
-	query_database = sys.argv[1]
+	global initial_accession
+	query_database = 'refseq_genomic'
+	initial_accession = sys.argv[1]
 
 	request = CrossBlast(query_database, None, [], [])
-	request.select_sequences()
+
+	# initial BLAST run to get the species.csv TODO TODO TODO
+	request.initial_blast()
+	# now run the rest of the CrossBLAST
+	request.gather_sequences()
 	request.get_accessions()
 	request.get_phylo_info()
 	request.blast_accessions()
 
 	# condenses the result files automatically into a single csv
-	condense_results(output_directory(species, subspecies, query_database))
+	condense_results(output_directory(initial_species, initial_subspecies, query_database))
 
 	# creates histogram image for the result
-	hist_results(output_directory(species, subspecies, query_database))
+	hist_results(output_directory(initial_species, initial_subspecies, query_database))
 
 if __name__ == '__main__':
 
@@ -237,12 +234,9 @@ if __name__ == '__main__':
 
 '''
 
-TODO
+TODO:
 
-	[ ] species will be the same...don't ask for it, just subspecies
-	[ ] add 'y/n' options to presence of subspecies
-	[ ] make so that full cross_blast will run off of a single accession number
-	[ ] tie condense_results.py and hist_results.py into this script
+	[ ]
 
 
 

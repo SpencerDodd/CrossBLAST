@@ -846,52 +846,43 @@ def output_phylo(hits, level, path):
 		phylo_save.write('{0}'.format(hit[2]))
 		fasta_save.close()
 
-# requires user interaction to determine the query sequence's species and subspecies strings
-#		NOT available through GenBank query
+# auto-parses phylo information from the given string
+# returns second two words separated by spaces:
+# Example:
+#		given: >gi|62184368|ref|NC_006915.1| Mus musculus molossinus mitochondrion, complete genome
+# 		returns: musculus, molossinus
 def get_deep_phylogeny(query_name):
 
-	querying_species = True
-	querying_subspecies = True
+	phylogeny = []
 
-	species = ''
-	subspecies = ''
+	column_count = 0
+	space_count = 0
 
-	while querying_species:
+	for index, c in enumerate(query_name):
 
-		print '\n Query Sequence: {0}'.format(query_name)
-		current_species = raw_input('What is the species name of this organism? \n')
-		correct = raw_input('Is this the correct species name? (y / n): {0} \n'.format(current_species))
+		if column_count == 4:
 
-		if correct.lower() == 'y' or correct.lower == 'yes':
+			query_remainder = query_name[index + 1:]
 
-			species = current_species
+			break_point = 0
 
-			querying_species = False
+			for index, c in enumerate(query_remainder):
 
-	while querying_subspecies:
+				if space_count == 3:
 
-		is_subspecies = raw_input('Is there a subspecies name of this organism? \n')
+					return phylogeny[1], phylogeny[2]
+					break
 
-		if is_subspecies.lower() == 'y' or is_subspecies.lower() == 'yes':
+				elif c == ' ':
 
-			current_subspecies = raw_input('What is the subspecies name of this organism? \n')
-			sub_correct = raw_input('Is this the correct subspecies name? (y / n): {0} \n'.format(current_subspecies))
+					phylo_section = query_remainder[break_point:index]
+					phylogeny.append(phylo_section)
+					break_point = index + 1
+					space_count += 1
 
-			if sub_correct.lower() == 'y' or sub_correct.lower() == 'yes':
+		elif c == '|':
 
-				subspecies = current_subspecies
-
-				querying_subspecies = False
-
-		else:
-
-			querying_subspecies = False
-
-
-	return species, subspecies
-
-
-
+			column_count += 1
 
 # queries GenBank for all of the hits in hit_accessions (with duplicates removed) to
 # obtain the FASTA sequence and phylogenetic information for each hit
@@ -1224,15 +1215,9 @@ if __name__ == "__main__":
 
 TODO
 
-	[ ] ensure that all is working after updates to cross_blast -> blast_accession pipeline (esp. with file output)
-		[ ] need to make directories when they don't exist (inside the result dir)
-	[ ] Set global variables / shell arguments to default values that get overridden if user inputs values
-	[ ] Add species and subspecies data to csv summary files
-	[ ] Make so that sequences that only have species and no subspecies match on genus level, not species level
-		- may need to make a part of manual data parsing with result .csv files
-	[ ] Figure out how to re-enter species / subspecies names if mistyped that doesn't
-		result in mis-formatted file-output and query_species / query_subspecies data
-		entries.
+	[ ] Manual data parsing with result .csv files to ensure that there is no
+		undesired subspecies <-> subspecies matching that is only labeled as species
+			*** due to lack of subspecific labeling on reference sequence
 
 '''
 
