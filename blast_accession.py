@@ -2,8 +2,11 @@ __author__ = 'Spencer Dodd' # I almost don't want to take credit for this pasta
 
 # NOTE: It's spaghetti. God help your soul if you need to debug or maintain this.
 
+# to block SeqIO error about it being an experimental module
+# probably should get a more permanent (and safe) fix
 import warnings
 warnings.filterwarnings("ignore")
+# Libs
 import Tkinter, tkFileDialog
 import datetime
 import os
@@ -16,6 +19,7 @@ import xlrd
 import csv
 import xml.etree.ElementTree as ET
 import sys
+from subprocess import call
 
 # -------------------------------------------
 # ------ ENSURE IS CORRECT BEFORE RUN! ------
@@ -27,16 +31,18 @@ import sys
 # -------------------------------------------
 # email parameter for NCBI issues with access
 Entrez.email = 'dodd.s@husky.neu.edu'
-#Entrez.email = 'spencer.evan.dodd@gmail.com'
 
-queries = []
-xml_results = []
+# Global Variable for the entrez query filter
+global query_filter
+query_filter = 'eukaryotes[filter]'
 
 # holds important information for query hits
 	# 0: Accession number
 	# 1: % identity
 	# 2: phylogeny
 	# 3: FASTA sequence (full sequence)
+queries = []
+xml_results = []
 hit_accessions = []
 hit_seqs = []
 hit_full_seqs = []
@@ -142,7 +148,7 @@ def handle_requests(query_database, input_type, query_accession):
 
 				# failed_attempt is true if the BLAST result returned a CPU usage error
 				# a non-failed attempt should break loop
-				failed_attempt = cpu_usage_error(file_name)
+				failed_attempt = xml_error(file_name)
 
 				attempt_num += 1
 
@@ -167,7 +173,7 @@ def handle_requests(query_database, input_type, query_accession):
 
 			fasta_string = record
 
-			fasta_result_handle = NCBIWWW.qblast(program='blastn', database=query_database, sequence=fasta_string)
+			fasta_result_handle = NCBIWWW.qblast(program='blastn', database=query_database, sequence=fasta_string, entrez_query=query_filter)
 
 			# removes any previous XML results
 			del xml_results[:]
@@ -177,7 +183,7 @@ def handle_requests(query_database, input_type, query_accession):
 
 			# failed_attempt is true if the BLAST result returned a CPU usage error
 			# a non-failed attempt should break loop
-			failed_attempt = cpu_usage_error(file_name)
+			failed_attempt = xml_error(file_name)
 
 			attempt_num += 1
 
@@ -202,7 +208,7 @@ def handle_requests(query_database, input_type, query_accession):
 
 			fasta_string = record
 
-			fasta_result_handle = NCBIWWW.qblast(program='blastn', database=query_database, sequence=fasta_string)
+			fasta_result_handle = NCBIWWW.qblast(program='blastn', database=query_database, sequence=fasta_string, entrez_query=query_filter)
 
 			# removes any previous XML results
 			del xml_results[:]
@@ -212,7 +218,7 @@ def handle_requests(query_database, input_type, query_accession):
 
 			# failed_attempt is true if the BLAST result returned a CPU usage error
 			# a non-failed attempt should break loop
-			failed_attempt = cpu_usage_error(file_name)
+			failed_attempt = xml_error(file_name)
 
 			attempt_num += 1
 
@@ -221,8 +227,9 @@ def handle_requests(query_database, input_type, query_accession):
 
 # checks to see if global variable hit_accessions is not filled with a CPU usage limit error
 # returns true if the XML file it is fed contains the error
-def cpu_usage_error(file_name):
+def xml_error(file_name):
 
+	this_day = datetime.datetime.today().strftime('%y_%m_%d')
 	this_hour = datetime.datetime.today().time().hour
 	this_minute = datetime.datetime.today().time().minute
 	this_second = datetime.datetime.today().time().second
@@ -240,6 +247,12 @@ def cpu_usage_error(file_name):
 
 		print '\nRe-trying BLAST query ...'
 
+		# alert that there was a BLAST CPU error on the query
+		error_message = '{0} {1}:{2}:{3} '.format(this_day, this_hour, this_minute, this_second)
+		error_message += 'BLAST CPU Usage Error: {0} {1} {2}'.format(query_accession, query_species, query_subspecies)
+		error_message += '\nRetrying query ...'
+		call(['python', 'send_update.py', error_message])
+
 		return True
 
 	# if there was no database reply from the algorithm, but query wasn't rejected
@@ -248,12 +261,21 @@ def cpu_usage_error(file_name):
 	elif len(root[8][0]) == 6 and query_db == '0':
 
 		print '\n---- Other BLAST ERROR (No Results for query) ({0}h {1}m {2}s) ----'.format(this_hour, this_minute, this_second)
+		# alert that there was a BLAST XML Results error
+		error_message = '{0} {1}:{2}:{3} '.format(this_day, this_hour, this_minute, this_second)
+		error_message += 'BLAST ERROR (No Results for query): {0} {1} {2}'.format(query_accession, query_species, query_subspecies)
+		error_message += '\nCancelling BLAST ...'
+		call(['python', 'send_update.py', error_message])
 
 		return False
 
 	# if the query went successfully
 	else:
 
+		# alert that the BLAST query was successful
+		error_message = '{0} {1}:{2}:{3} '.format(this_day, this_hour, this_minute, this_second)
+		error_message += 'BLAST Successful: {0} {1} {2}'.format(query_accession, query_species, query_subspecies)
+		call(['python', 'send_update.py', error_message])
 		return False
 
 # saves the current XML query object to a file
@@ -733,9 +755,6 @@ def summarize_level(hits, level, query_name, query_database):
 	# result is a list ordered by the highest % difference
 	ordered_hits.sort(key=lambda x: (-1 * float(x[0])))
 
-	# DEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUG
-	# DEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUG
-
 	# output the hits to excel file
 	excel_hits.sort(key=lambda x: (-1 * float(x[2])))
 
@@ -784,6 +803,8 @@ def summarize_level(hits, level, query_name, query_database):
 	file_save = '{0}/{1}_hits.csv'.format(save_path, level)
 	book.save(file_save)
 
+	print 'Saving .csv results: {0}'.format(file_save)
+
 	# convert xls to csv
 	with xlrd.open_workbook(file_save) as wb:
 
@@ -796,9 +817,6 @@ def summarize_level(hits, level, query_name, query_database):
 			for r in range(sh.nrows):
 
 				c.writerow(sh.row_values(r))
-
-	# DEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUG
-	# DEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUGDEBUG
 
 	# format to string
 	level_summary += level + '\n'
@@ -903,6 +921,8 @@ def query_genbank(query_name, query_database):
 
 			for index, hit in enumerate(hit_accessions):
 
+				print '	Querying sequence {0} / {1}'.format(index + 1, len(hit_accessions))
+
 				accession_num = hit[0]
 
 				# saves the accession number in file for debugging or future reference
@@ -917,68 +937,41 @@ def query_genbank(query_name, query_database):
 				# get the organism phylogeny from genbank
 				phylo_handle = Entrez.efetch(db='nucleotide', id=accession_num, rettype='gb', retmode='xml')
 
-				# for cross_blasting
-				if input_type == 'cross':
+				file_path = '{0}GENBANK_DATA/'.format(output_file_path)
 
-					file_path = '{0}GENBANK_DATA/'.format(output_file_path)
+				# make dir if it doesn't already exist
+				if not os.path.exists(file_path):
 
-					# make dir if it doesn't already exist
-					if not os.path.exists(file_path):
+					os.makedirs(file_path)
 
-						os.makedirs(file_path)
+				file_path += 'query_{0}_hit_{1}.xml'.format(query_name, accession_num)
 
-					file_name += 'query_{1}_hit_{2}.xml'.format(query_name, accession_num)
+				save_file = open(file_path, 'w')
+				save_file.write(phylo_handle.read())
+				save_file.close()
 
-					save_file = open(file_name, 'w')
-					save_file.write(phylo_handle.read())
-					save_file.close()
+				phylo_path = get_phylo(file_path, query_database)
 
-					phylo_path = get_phylo(file_name, query_database)
-
-					# get the full fasta sequence of the hit (not just the homologous region)
-					current_fasta = handle.read()
-
-					# add the fasta sequence and phylo path to hit_accessions
-					hit_accessions[hit_accessions.index(hit)].append(phylo_path)
-					hit_accessions[hit_accessions.index(hit)].append(current_fasta)
-
-				# accession, genbank, or fasta blasting
-				else:
-
-					# output file to folder "GENBANK_DATA", 1 level back from pwd
-					file_path = '{0}GENBANK_DATA/'.format(result_output_directory(os.getcwd()))
-
-					# make dir if it doesn't already exist
-					if not os.path.exists(file_path):
-
-						os.makedirs(file_path)
-
-					file_name = '{0}query_{1}_hit_{2}.xml'.format(file_path, query_name, accession_num)
-
-					save_file = open(file_name, 'w')
-					save_file.write(phylo_handle.read())
-					save_file.close()
-
-					phylo_path = get_phylo(file_name, query_database)
-
-					# get the full fasta sequence of the hit (not just the homologous region)
-					current_fasta = handle.read()
-
-					# add the fasta sequence and phylo path to hit_accessions
-					hit_accessions[hit_accessions.index(hit)].append(phylo_path)
-					hit_accessions[hit_accessions.index(hit)].append(current_fasta)
-				# -------------------------------------------------------
-				# -------------------------------------------------------
-				
+				# get the full fasta sequence of the hit (not just the homologous region)
+				current_fasta = handle.read()
 				full_hit_seqs += current_fasta
+
+				# add the fasta sequence and phylo path to hit_accessions
+				hit_accessions[hit_accessions.index(hit)].append(phylo_path)
+				hit_accessions[hit_accessions.index(hit)].append(current_fasta)
+
+				# -------------------------------------------------------
+				# -------------------------------------------------------
 
 			return all_accessions, full_hit_seqs
 
+			querying = False
+
 		except:
 
-			query_genbank(query_name, query_database)
+			print 'Connection lost. Re-querying GenBank ...'
 
-		querying = False
+			return query_genbank(query_name, query_database)
 
 # consolidates duplicate accession numbers in the BLAST query hits to get accurate identity %s
 def remove_duplicate_hits(accessions):
@@ -1193,7 +1186,7 @@ def main():
 	elif input_type == 'genbank':
 
 		print '\n---- GenBank Query with BLAST XML Input -----\n '
-		input_type = 'accession'
+		input_type = 'cross'
 
 		root = Tkinter.Tk()
 		root.withdraw()
@@ -1215,12 +1208,13 @@ if __name__ == "__main__":
 
 TODO
 
+	[ ] Re-support query types other than 'cross' for query_genbank
+		- Just need to change file output locations, or pre-specify if the input isn't
+		cross
+
 	[ ] Manual data parsing with result .csv files to ensure that there is no
 		undesired subspecies <-> subspecies matching that is only labeled as species
 			*** due to lack of subspecific labeling on reference sequence
-
-	[ ] Change the design from a list of XML files and queries to a single request from
-		cross_blast.py
 
 '''
 
