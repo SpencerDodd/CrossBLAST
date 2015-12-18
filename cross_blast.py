@@ -118,7 +118,7 @@ class CrossBlast:
 			message += '{0}: {1} {2} {3} (Sequence {4} of {5}'.format(accession, initial_genus, species, subspecies, index + 1, len(self.accessions))
 			call(['python', 'send_update.py', message])
 			# BLAST
-			call(['python', 'blast_accession.py', 'cross', str(self.query_database), species, subspecies, str(accession), str(file_path)])
+			call(['python', 'blast_accession.py', 'cross', str(self.query_database), str(species), str(subspecies), str(accession), str(file_path)])
 
 # returns the output directory of the initial query
 def output_initial_directory():
@@ -278,10 +278,10 @@ def main():
 	request.blast_accessions()
 
 	# condenses the result files automatically into a single csv
-	condense_results(output_directory(initial_species, initial_subspecies, query_database))
+	call(['python', 'condense_results.py', str(output_directory(initial_species, initial_subspecies, query_database))])
 
 	# creates histogram image for the result
-	hist_results(output_directory(initial_species, initial_subspecies, query_database))
+	call(['python', 'hist_results.py' ,str(output_directory(initial_species, initial_subspecies, query_database))])
 
 	end_time = datetime.datetime.now()
 	end_day = datetime.datetime.today().strftime('%y_%m_%d')
