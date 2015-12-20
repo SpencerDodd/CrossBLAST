@@ -32,7 +32,7 @@ class CrossBlast:
 
 		print '\nGathering initial BLAST results ...\n'
 
-		self.request_path = initial_file_path + 'Excel_hits/Species_hits.csv'
+		self.request_path = initial_file_path + 'Excel_Hits/Species_hits.csv'
 		
 	# the initial BLAST run to generate the Species.csv that is used for cross_blasting
 	def initial_blast(self):
@@ -59,9 +59,9 @@ class CrossBlast:
 		# update with progress
 		message = '{0} {1}:{2}:{3} CrossBLAST (initial sequence) '.format(current_day, current_hour, current_min, current_sec)
 		message += '{0}: {1} {2} {3}'.format(initial_accession, initial_genus, initial_species, initial_subspecies)
-		call(['python', 'send_update.py', message])
+		call(['python', './send_update.py', message])
 		# BLASTs
-		call(['python', 'blast_accession.py', 'cross', query_database, initial_species, initial_subspecies, initial_accession, initial_file_path])
+		call(['python', './blast_accession.py', 'cross', query_database, initial_species, initial_subspecies, initial_accession, initial_file_path])
 
 
 	# reads the accession numbers from the results file and adds to the accessions
@@ -116,9 +116,9 @@ class CrossBlast:
 			# update with progress
 			message = '{0} {1}:{2}:{3} CrossBLAST-ing '.format(current_day, current_hour, current_min, current_sec)
 			message += '{0}: {1} {2} {3} (Sequence {4} of {5}'.format(accession, initial_genus, species, subspecies, index + 1, len(self.accessions))
-			call(['python', 'send_update.py', message])
+			call(['python', './send_update.py', message])
 			# BLAST
-			call(['python', 'blast_accession.py', 'cross', str(self.query_database), str(species), str(subspecies), str(accession), str(file_path)])
+			call(['python', './blast_accession.py', 'cross', str(self.query_database), str(species), str(subspecies), str(accession), str(file_path)])
 
 # returns the output directory of the initial query
 def output_initial_directory():
@@ -278,10 +278,10 @@ def main():
 	request.blast_accessions()
 
 	# condenses the result files automatically into a single csv
-	call(['python', 'condense_results.py', str(output_directory(initial_species, initial_subspecies, query_database))])
+	call(['python', 'condense_results.py', str(output_initial_directory(initial_species, initial_subspecies, query_database))])
 
 	# creates histogram image for the result
-	call(['python', 'hist_results.py' ,str(output_directory(initial_species, initial_subspecies, query_database))])
+	call(['python', 'hist_results.py' ,str(output_initial_directory(initial_species, initial_subspecies, query_database))])
 
 	end_time = datetime.datetime.now()
 	end_day = datetime.datetime.today().strftime('%y_%m_%d')
@@ -291,7 +291,7 @@ def main():
 	update_message += 'RUN COMPLETE! {0}: {1} {2} {3}'.format(initial_accession, initial_genus, initial_species, initial_subspecies)
 	update_message += '\n-----------'
 	update_message += '\nRuntime: {0}'.format(end_time - start_time)
-	call(['python', 'send_update.py', update_message])
+	call(['python', './send_update.py', update_message])
 	print update_message
 
 if __name__ == '__main__':
