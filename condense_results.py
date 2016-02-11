@@ -30,7 +30,7 @@ class Condenser:
 	# condenses the contents of the selected files to a single file
 	def condense_results(self):
 
-		save_file = '{0}Summary.csv'.format(directory_path)
+		save_file = '{0}/Summary.csv'.format(directory_path)
 
 		with open(save_file, 'wb') as f:
 

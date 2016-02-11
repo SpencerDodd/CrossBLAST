@@ -212,7 +212,12 @@ def get_deep_phylogeny(query_name, request_type):
 
 						# returns the 2nd and 3rd words in the name
 						# species and subspecies (or garbage for subspecies)
-						return phylogeny[0], phylogeny[1], phylogeny[2]
+
+						phylo_genus = phylogeny[0].lower().replace(' ', '').replace(',', '')
+						phylo_species = phylogeny[1].lower().replace(' ', '').replace(',', '')
+						phylo_subspecies = phylogeny[2].lower().replace(' ', '').replace(',', '')
+
+						return phylo_genus, phylo_species, phylo_subspecies
 						break
 
 					elif c == ' ':
@@ -278,10 +283,10 @@ def main():
 	request.blast_accessions()
 
 	# condenses the result files automatically into a single csv
-	call(['python', 'condense_results.py', str(output_initial_directory(initial_species, initial_subspecies, query_database))])
+	call(['python', 'condense_results.py', str(output_initial_directory())])
 
 	# creates histogram image for the result
-	call(['python', 'hist_results.py' ,str(output_initial_directory(initial_species, initial_subspecies, query_database))])
+	call(['python', 'hist_results.py' ,str(output_initial_directory())])
 
 	end_time = datetime.datetime.now()
 	end_day = datetime.datetime.today().strftime('%y_%m_%d')
@@ -304,12 +309,8 @@ TODO:
 
 	[ ] ensure that file paths are correct in output_directory
 
-	[ ] turn condense_results and hist_results into 'call()' calls
-
 	[ ] add a log file so that if you leave it running on a box and SSH in you can
 		see the progress on the run / what remains
-
-		- could also update the sequence's BLAST folder name with a (COMPLETED) tag
 
 
 
