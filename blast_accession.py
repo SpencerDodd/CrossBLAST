@@ -67,7 +67,8 @@ Families = [
 	'Phasianidae',			# red junglefowl
 	'Hominidae',			# human / hominids
 	'Muridae',				# Mouse
-	'Balaena'				# Bowhead whale
+	'Balaena',				# Bowhead whale
+	'Felidae'				# Lion
 ]
 Subfamilies = [
 	'Cervinae',				# deer
@@ -78,7 +79,8 @@ Subfamilies = [
 	'Heterocephalinae', 	# NMR
 	'Salmoninae',			# salmon
 	'Phasianidae',			# red junglefowl
-	'Murinae'				# Mouse
+	'Murinae',				# Mouse
+	'Pantherinae'			# Lion
 ]
 # -------------------------------------------
 
@@ -157,9 +159,10 @@ def handle_requests(query_database, input_type, query_accession):
 			attempt_num += 1
 
 		except:
-
+			print "Unexpected error:", sys.exc_info()[0]
 			print 'Connection issue. Re-trying BLAST ...'
 			handle_requests(query_database, input_type, query_accession)
+			failed_attempt = False
 
 	# stores the file name for xml parsing later (only if query was successful)
 	xml_results.append(file_name)
@@ -283,7 +286,7 @@ def parse_queries(query_database, query_species, query_subspecies, query_type):
 
 		output_full_hits(query_name, full_hit_seqs, all_accessions)
 
-		# remove hits that are not full sequences (sequence length < 16000)
+		# remove hits that are not full sequences (sequence length < 16000) TODO
 		print '\nRemoving incomplete sequences ...'
 
 		# ----------------------------------------- SORTS HITS BY PHYLOGENY
@@ -338,6 +341,8 @@ def sort_by_phylogeny(query_species, query_subspecies, query_database, query_typ
 	#query_species, query_subspecies = get_deep_phylogeny(query_name)
 	query_genus = query_phylogeny[-1]
 
+	print 'Query genus: {0}'.format(query_genus)
+
 	# find and compare phylogeny of current hit to phylogeny of query
 	for hit in hit_accessions:
 
@@ -363,6 +368,15 @@ def sort_by_phylogeny(query_species, query_subspecies, query_database, query_typ
 		# compares the hit phylogeny list to the query phylogeny list
 
 		closest_relation = compare_hit_to_query_phylogeny(hit_phylogeny, query_phylogeny, hit_name, query_species, query_subspecies)
+
+		print '----------------------------------------'
+		print 'Hit phylogeny: {0}'.format(hit_phylogeny)
+		print 'Query phylogeny: {0}'.format(query_phylogeny)
+		print 'Hit name: {0}'.format(hit_name)
+		print 'Query species: {0}'.format(query_species)
+		print 'Query subspecies: {0}'.format(query_subspecies)
+		print 'Closest relation: {0}'.format(closest_relation)
+		print '----------------------------------------'
 
 		if closest_relation == 'subspecies':
 
@@ -418,6 +432,40 @@ def sort_by_phylogeny(query_species, query_subspecies, query_database, query_typ
 # phylogenetic relation between the two sequences
 def compare_hit_to_query_phylogeny(hit_phylogeny, query_phylogeny, hit_name, query_species, query_subspecies):
 
+	incorrect_values = [
+		'complete',
+		'genome',
+		'mitochondrial',
+		'mitochondrion',
+		'isolate',
+		'breed',
+		'voucher',
+		'x',
+		'chromosome',
+		'unplaced',
+		'genomic',
+		'scaffold',
+		'whole',
+		'sequence',
+		'strain',
+		'DNA'
+	]
+
+	# clean the input
+	query_species = query_species.lower().replace(' ', '').replace(',', '')
+	query_subspecies = query_subspecies.lower().replace(' ', '').replace(',', '')
+
+	# removes parsed values that are not relevant
+	if query_species in incorrect_values:
+
+		print 'incorrect value (species): {0}'.format(query_species) # DEBUG
+		query_species = 'incorrect_value_substitution'
+
+	if query_subspecies in incorrect_values:
+
+		print 'incorrect value (subspecies): {0}'.format(query_subspecies) # DEBUG
+		query_subspecies = 'incorrect_value_substitution'
+
 	# allows us to get at least the species / subspecies values for hits / queries with
 	# malformed phylo data (from GenBank)
 
@@ -446,6 +494,7 @@ def compare_hit_to_query_phylogeny(hit_phylogeny, query_phylogeny, hit_name, que
 
 		if hit_count == 3:
 
+			print 'sub 1' # DEBUG
 			return 'subspecies'
 
 		# if genus and species are the same, but not the subspecies
@@ -466,6 +515,7 @@ def compare_hit_to_query_phylogeny(hit_phylogeny, query_phylogeny, hit_name, que
 
 		if hit_count == 2:
 
+			print 'sub 2' # DEBUG
 			return 'subspecies'
 
 		elif hit_count == 1:
@@ -480,6 +530,7 @@ def compare_hit_to_query_phylogeny(hit_phylogeny, query_phylogeny, hit_name, que
 	# if there is a subspecies in the query, and it is in the hit name, they must be subspecies related
 	elif len(query_subspecies) > 0 and query_subspecies in hit_name:
 
+		print 'sub 3' # DEBUG
 		return 'subspecies'
 
 	# if there is just the query species in the hit name, they must be delegated to OTHER
@@ -502,6 +553,7 @@ def compare_hit_to_query_phylogeny(hit_phylogeny, query_phylogeny, hit_name, que
 
 		if len(query_subspecies) > 0 and query_subspecies in hit_phylogeny[0]:
 
+			print 'sub 4' # DEBUG
 			return 'subspecies'
 
 		elif query_species in hit_phylogeny[0]:
@@ -728,7 +780,7 @@ def summarize_level(hits, level, query_name, query_database):
 
 	# save the file
 
-	file_save = '{0}/{1}_hits.csv'.format(save_path, level)
+	file_save = '{0}{1}_hits.csv'.format(save_path, level)
 	book.save(file_save)
 
 	print 'Saving .csv results: {0}'.format(file_save)
@@ -934,7 +986,7 @@ def get_phylo(xml_file, query_database):
 	root = tree.getroot()
 
 	# location is different if seq is a reference genome
-	if query_database == 'refseq':
+	if query_database == 'refseq_genomic':
 
 		phylo = root[0][16].text
 
@@ -1071,11 +1123,11 @@ def main():
 
 	# defines the type of run that will be completed
 	# i.e. FASTA, accession #, or w.e.
-	input_type = sys.argv[1]
-	query_database = sys.argv[2]
-	query_species = sys.argv[3]
-	query_subspecies = sys.argv[4]
-	query_accession = sys.argv[5]
+	input_type = sys.argv[1].lower().replace(' ', '').replace(',', '')
+	query_database = sys.argv[2].lower().replace(' ', '').replace(',', '')
+	query_species = sys.argv[3].lower().replace(' ', '').replace(',', '')
+	query_subspecies = sys.argv[4].lower().replace(' ', '').replace(',', '')
+	query_accession = sys.argv[5].lower().replace(' ', '').replace(',', '')
 	output_file_path = sys.argv[6]
 
 	# creates the result directory if it doesn't exist
